@@ -65,7 +65,13 @@
                   "maximumError": "8kB"
                 }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
+                }
+              ]
             },
             "development": {
               "optimization": false,
@@ -77,11 +83,11 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
-"options": {
-    "allowedHosts": [
-      "e736-157-100-112-211.ngrok-free.app"
-    ]
-  },
+          "options": {
+            "allowedHosts": [
+              "e736-157-100-112-211.ngrok-free.app"
+            ]
+          },
           "configurations": {
             "production": {
               "buildTarget": "inventario-ms:build:production"
