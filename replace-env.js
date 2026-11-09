@@ -9,7 +9,7 @@ if (!fs.existsSync(envDir)) {
 }
 
 // Valor por defecto si no viene ninguna variable de entorno
-const apiUrl = process.env.API_URL || 'http://localhost:3000';
+const apiUrl = process.env.API_URL || 'https://ms.teamcellmania.com';
 
 // 1. Configuración para Producción (environment.prod.ts)
 const targetProdPath = path.join(envDir, 'environment.prod.ts');
