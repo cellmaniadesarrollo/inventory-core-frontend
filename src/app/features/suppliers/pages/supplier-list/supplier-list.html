@@ -1,0 +1,320 @@
+<section class="space-y-5">
+  <!-- Encabezado -->
+  <div class="flex flex-wrap items-center justify-between gap-3 pb-1">
+    <div>
+      <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-heading">Proveedores</h2>
+      <p class="text-xs sm:text-sm text-text-subtle mt-0.5">
+        @if (meta(); as m) {
+        Un total de <span class="font-semibold text-heading">{{ m.total }}</span>
+        {{ m.total === 1 ? 'proveedor registrado' : 'proveedores registrados' }}.
+        } @else {
+        Proveedores de la empresa.
+        }
+      </p>
+    </div>
+    <button type="button" (click)="openNew()"
+      class="btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold shadow-md transition-all hover:shadow-lg active:scale-[0.99]">
+      <svg class="h-4 w-4 stroke-[2.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+      </svg>
+      Nuevo proveedor
+    </button>
+  </div>
+
+  <!-- Avisos -->
+  @if (notice()) {
+  <div class="flex items-center gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300 shadow-sm" role="status">
+    <svg class="h-5 w-5 shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+    <span>{{ notice() }}</span>
+  </div>
+  }
+  @if (error()) {
+  <div class="flex items-start justify-between gap-3 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400 shadow-sm" role="alert">
+    <div class="flex items-center gap-2.5">
+      <svg class="h-5 w-5 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
+      <span>{{ error() }}</span>
+    </div>
+    <button type="button" (click)="dismissError()" class="cursor-pointer rounded-lg p-1 transition-colors hover:bg-red-500/20" aria-label="Cerrar aviso">
+      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+  }
+
+  <!-- Búsqueda, filtros y orden -->
+  <div class="rounded-2xl border border-border/70 bg-surface/60 backdrop-blur-md p-3.5 sm:p-4 shadow-sm space-y-3.5">
+    <div class="flex flex-wrap items-center gap-3">
+      <div class="relative w-full sm:w-auto sm:flex-1">
+        <span class="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-text-subtle">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+          </svg>
+        </span>
+        <input type="text" [formControl]="search" autocomplete="off"
+          placeholder="Buscar por razón social, nombre comercial, identificación o código..."
+          aria-label="Buscar proveedores"
+          class="input-field pl-10 pr-10 text-sm shadow-none focus:ring-2 focus:ring-primary/20" />
+        @if (searchText()) {
+        <button type="button" (click)="clearSearch()"
+          class="absolute inset-y-0 right-3 flex cursor-pointer items-center text-text-subtle transition hover:text-heading"
+          aria-label="Borrar búsqueda">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        }
+      </div>
+
+      @if (hasActive()) {
+      <button type="button" (click)="clear()"
+        class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-primary rounded-xl border border-primary/20 hover:bg-primary/10 transition-colors">
+        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+        Limpiar filtros
+      </button>
+      }
+    </div>
+
+    <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-4 pt-1">
+      <form [formGroup]="form" (submit)="$event.preventDefault()" class="contents">
+        @for (f of fields(); track f.key) {
+        <div>
+          <label [for]="'f-' + f.key" class="mb-1 block text-[11px] font-medium text-text-subtle uppercase tracking-wider">{{ f.label }}</label>
+          <select [id]="'f-' + f.key" [formControlName]="f.key" class="input-field text-xs py-2">
+            <option value="">{{ f.empty }}</option>
+            @for (o of f.options; track o.id) {
+            <option [value]="o.id">{{ o.name }}</option>
+            }
+          </select>
+        </div>
+        }
+      </form>
+
+      <div>
+        <label for="sortBy" class="mb-1 block text-[11px] font-medium text-text-subtle uppercase tracking-wider">Ordenar por</label>
+        <div class="flex gap-1.5">
+          <select id="sortBy" class="input-field text-xs py-2 flex-1" (change)="setSortBy($any($event.target).value)">
+            @for (o of sortOptions; track o.value) {
+            <option [value]="o.value" [selected]="o.value === query().sortBy">{{ o.label }}</option>
+            }
+          </select>
+          <button type="button" (click)="toggleDir()"
+            class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-border bg-surface text-xs font-semibold text-body transition-all hover:bg-surface-hover hover:text-heading shadow-sm"
+            [attr.aria-label]="query().sortDir === 'ASC' ? 'Orden ascendente' : 'Orden descendente'"
+            [attr.title]="query().sortDir === 'ASC' ? 'Ascendente' : 'Descendente'">
+            {{ query().sortDir === 'ASC' ? '↑' : '↓' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenedor -->
+  @if (!result()) {
+    @if (loading()) {
+    <div class="rounded-2xl border border-border/70 bg-surface/30 p-12 text-center text-body">
+      <div class="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent mb-2"></div>
+      <p class="text-sm">Cargando proveedores...</p>
+    </div>
+    }
+  } @else {
+    @if (items().length === 0) {
+    <div class="rounded-2xl border border-border/70 bg-surface/30 px-6 py-14 text-center">
+      <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-surface-hover text-text-subtle mb-3">
+        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+        </svg>
+      </div>
+      <p class="font-semibold text-heading">
+        {{ hasActive() ? 'Sin resultados' : 'Aún no hay proveedores registrados' }}
+      </p>
+      <p class="mt-1 text-xs text-text-subtle max-w-sm mx-auto">
+        {{ hasActive() ? 'No encontramos coincidencias con los filtros aplicados.' : 'Comienza agregando tu primer proveedor.' }}
+      </p>
+      @if (hasActive()) {
+      <button type="button" (click)="clear()" class="mt-4 text-xs font-semibold text-primary hover:underline">
+        Limpiar filtros de búsqueda
+      </button>
+      }
+    </div>
+    } @else {
+
+    <div class="transition-opacity" [class.opacity-60]="loading()">
+
+      <!-- VISTA MÓVIL -->
+      <div class="grid grid-cols-1 gap-3.5 md:hidden">
+        @for (s of items(); track s.id) {
+        <article class="rounded-2xl border border-border/70 bg-surface/50 p-4 space-y-3 shadow-xs">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-primary-soft/60 text-sm font-bold text-primary">
+                #{{ s.code }}
+              </div>
+              <div class="min-w-0">
+                <h3 class="font-bold text-heading text-sm truncate">{{ s.businessName }}</h3>
+                @if (s.tradeName) {
+                <p class="text-xs text-text-subtle truncate">{{ s.tradeName }}</p>
+                }
+              </div>
+            </div>
+            <span class="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
+              [class]="s.status ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' : 'bg-red-500/15 text-red-600 dark:text-red-400'">
+              {{ s.status ? 'Activo' : 'Inactivo' }}
+            </span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-xs border-t border-border/40 pt-2.5">
+            <div>
+              <span class="text-[10px] font-medium text-text-subtle uppercase">{{ idTypeLabel(s.identificationType) }}</span>
+              <p class="font-mono font-medium text-heading mt-0.5">{{ s.identificationNumber }}</p>
+            </div>
+            <div>
+              <span class="text-[10px] font-medium text-text-subtle uppercase">País</span>
+              <p class="font-medium text-heading mt-0.5">{{ s.country.name }}</p>
+            </div>
+          </div>
+
+          <div class="rounded-xl bg-teal-500/10 border border-teal-500/20 p-2.5 text-xs space-y-0.5">
+            <span class="text-[10px] font-semibold uppercase text-teal-800 dark:text-teal-200">Contacto</span>
+            <p class="text-teal-900 dark:text-teal-100">{{ s.phone || '—' }}</p>
+            <p class="text-teal-900 dark:text-teal-100 break-all">{{ s.email || '—' }}</p>
+          </div>
+
+          <div class="flex items-center justify-between border-t border-border/40 pt-2.5">
+            <p class="text-[11px] text-text-subtle line-clamp-1 flex-1 pr-3" [attr.title]="s.address">{{ s.address }}</p>
+            <button type="button" (click)="openDetail(s.id)"
+              class="inline-flex cursor-pointer items-center gap-1 rounded-xl border border-border/80 bg-surface px-3.5 py-1.5 text-xs font-semibold text-heading shadow-xs hover:bg-surface-hover hover:text-primary">
+              <span>Ver detalle</span>
+              <svg class="h-3.5 w-3.5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+              </svg>
+            </button>
+          </div>
+        </article>
+        }
+      </div>
+
+      <!-- VISTA ESCRITORIO (Estilo Tarjeta Horizontal Unificado con gap-1) -->
+      <div class="hidden md:flex flex-col gap-1">
+        @for (s of items(); track s.id) {
+        <article class="group relative rounded-2xl border border-border/70 bg-surface/50 p-4 transition-all hover:bg-surface/80 hover:shadow-md">
+          <div class="flex items-center justify-between gap-6">
+          
+            <!-- BLOQUE IZQUIERDO: Ícono/Código, Razón Social y Nombre Comercial -->
+            <div class="flex items-center gap-4 flex-1 min-w-0">
+              <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-primary-soft/60 text-xs font-bold text-primary font-mono">
+                #{{ s.code }}
+              </div>
+
+              <div class="min-w-0 flex-1 space-y-1.5">
+                <div class="flex items-center gap-2.5 flex-wrap">
+                  <h3 class="font-bold text-heading text-sm truncate" [attr.title]="s.businessName">{{ s.businessName }}</h3>
+                  
+                  <span class="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                    [class]="s.status ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' : 'bg-red-500/15 text-red-600 dark:text-red-400'">
+                    {{ s.status ? 'Activo' : 'Inactivo' }}
+                  </span>
+
+                  @if (s.tradeName) {
+                  <span class="text-xs text-text-subtle truncate max-w-[200px]" [attr.title]="s.tradeName">
+                    · {{ s.tradeName }}
+                  </span>
+                  }
+                </div>
+
+                <!-- Fila de metadatos secundarios (Identificación, País/Dirección, Contacto) -->
+                <div class="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-text-subtle">
+                  <div class="flex items-center gap-1 bg-primary/10 text-primary px-2 py-0.5 rounded-md font-medium text-[11px]">
+                    <span>{{ idTypeLabel(s.identificationType) }}:</span>
+                    <span class="font-mono font-semibold">{{ s.identificationNumber }}</span>
+                  </div>
+
+                  <div class="flex items-center gap-1">
+                    <span class="font-medium text-heading">{{ s.country.name }}</span>
+                    @if (s.address) {
+                    <span class="text-[11px] truncate max-w-[180px]" [attr.title]="s.address">· {{ s.address }}</span>
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- BLOQUE DERECHO: Tarjeta Mini de Contacto y Botón de Acción en Ícono -->
+            <div class="flex items-center gap-3 shrink-0 border-l border-border/60 pl-4">
+              <!-- Contacto Card mini -->
+              <div class="rounded-xl border border-teal-500/20 bg-teal-500/10 p-2.5 text-xs min-w-[140px] max-w-[200px]">
+                @if (!s.phone && !s.email) {
+                <span class="text-text-subtle">Sin contacto</span>
+                } @else {
+                @if (s.phone) {
+                <div class="font-semibold text-teal-800 dark:text-teal-200 truncate">{{ s.phone }}</div>
+                }
+                @if (s.email) {
+                <div class="text-[10px] text-teal-700/80 dark:text-teal-300/80 truncate mt-0.5" [attr.title]="s.email">{{ s.email }}</div>
+                }
+                }
+              </div>
+
+              <!-- Botón de Acción (Solo Ícono) -->
+              <button type="button" (click)="openDetail(s.id)"
+                class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-border bg-surface text-heading shadow-sm transition-all hover:border-primary hover:bg-surface-hover hover:text-primary hover:shadow-md active:scale-[0.96]"
+                title="Ver / editar proveedor" aria-label="Ver / editar proveedor">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
+            </div>
+
+          </div>
+        </article>
+        }
+      </div>
+    </div>
+    }
+
+    <!-- Paginación -->
+    @if (meta(); as m) {
+    <div class="rounded-2xl border border-border/70 bg-surface/50 px-4 py-3 text-xs text-body flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+      <p class="text-text-subtle text-center sm:text-left">
+        Mostrando del <span class="font-semibold text-heading">{{ from() }}</span> al
+        <span class="font-semibold text-heading">{{ to() }}</span> de
+        <span class="font-semibold text-heading">{{ m.total }}</span> resultados
+      </p>
+
+      <div class="flex flex-wrap items-center justify-center gap-3.5">
+        <label class="flex items-center gap-2 text-text-subtle">
+          Filas
+          <select class="input-field w-auto py-1 px-2 text-xs" (change)="setLimit($any($event.target).value)" aria-label="Filas por página">
+            @for (l of limits; track l) {
+            <option [value]="l" [selected]="l === m.limit">{{ l }}</option>
+            }
+          </select>
+        </label>
+
+        <div class="flex items-center gap-1">
+          <button type="button" (click)="goTo(1)" [disabled]="m.page <= 1"
+            class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-border transition-all hover:bg-surface-hover hover:text-heading disabled:cursor-not-allowed disabled:opacity-30"
+            aria-label="Primera página">«</button>
+          <button type="button" (click)="goTo(m.page - 1)" [disabled]="m.page <= 1"
+            class="cursor-pointer rounded-lg border border-border px-2.5 h-8 text-xs font-medium transition-all hover:bg-surface-hover hover:text-heading disabled:cursor-not-allowed disabled:opacity-30">Ant.</button>
+
+          <span class="px-1.5 text-text-subtle font-medium">Pág. {{ m.page }} / {{ m.totalPages || 1 }}</span>
+
+          <button type="button" (click)="goTo(m.page + 1)" [disabled]="m.page >= m.totalPages"
+            class="cursor-pointer rounded-lg border border-border px-2.5 h-8 text-xs font-medium transition-all hover:bg-surface-hover hover:text-heading disabled:cursor-not-allowed disabled:opacity-30">Sig.</button>
+          <button type="button" (click)="goTo(m.totalPages)" [disabled]="m.page >= m.totalPages"
+            class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-border transition-all hover:bg-surface-hover hover:text-heading disabled:cursor-not-allowed disabled:opacity-30"
+            aria-label="Última página">»</button>
+        </div>
+      </div>
+    </div>
+    }
+  }
+</section>

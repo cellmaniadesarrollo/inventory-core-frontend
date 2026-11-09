@@ -1,0 +1,89 @@
+<div class="flex w-[min(92vw,1100px)] flex-col overflow-hidden rounded-2xl bg-black shadow-2xl">
+
+    <div class="relative w-full">
+        <!-- Cerrar -->
+        <button type="button" (click)="cerrar()" aria-label="Cerrar"
+            class="absolute right-2 top-2 z-10 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-black/55 text-white transition-colors hover:bg-black/80">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+
+        @if (hasMultiple) {
+        <button type="button" (click)="anterior()" aria-label="Anterior"
+            class="absolute left-2 top-1/2 z-10 hidden h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-black/55 text-white transition-colors hover:bg-black/80 sm:flex">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+            </svg>
+        </button>
+        <button type="button" (click)="siguiente()" aria-label="Siguiente"
+            class="absolute right-2 top-1/2 z-10 hidden h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-black/55 text-white transition-colors hover:bg-black/80 sm:flex">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
+        </button>
+        }
+
+        <!-- Visor -->
+        <div #wrapper
+            class="flex h-[75dvh] w-full touch-none select-none items-center justify-center overflow-hidden"
+            [class.cursor-grab]="scale() > 1"
+            (wheel)="onWheel($event)"
+            (pointerdown)="onPointerDown($event)"
+            (pointermove)="onPointerMove($event)"
+            (pointerup)="onPointerUp($event)"
+            (pointercancel)="onPointerUp($event, true)">
+            <img #img [src]="currentImage().url" [alt]="currentImage().fileName" draggable="false"
+                class="pointer-events-none max-h-full max-w-full origin-center object-contain will-change-transform [-webkit-user-drag:none]"
+                [class.transition-transform]="smooth()" [class.duration-200]="smooth()"
+                [style.transform]="transform()" />
+        </div>
+    </div>
+
+    <!-- Barra de herramientas -->
+    <div class="flex items-center justify-center gap-1 bg-neutral-900/95 px-3 py-1.5 text-[13px] text-white">
+        <button type="button" (click)="zoomOut()" [disabled]="!canZoomOut()" title="Alejar (-)" aria-label="Alejar"
+            class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full hover:bg-white/10 disabled:cursor-default disabled:text-white/35 disabled:hover:bg-transparent">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.2-5.2m0 0A7.5 7.5 0 105.2 5.2a7.5 7.5 0 0010.6 10.6zM13.5 10.5h-6" />
+            </svg>
+        </button>
+
+        <span class="min-w-11 text-center tabular-nums">{{ zoomLabel() }}</span>
+
+        <button type="button" (click)="zoomIn()" [disabled]="!canZoomIn()" title="Acercar (+)" aria-label="Acercar"
+            class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full hover:bg-white/10 disabled:cursor-default disabled:text-white/35 disabled:hover:bg-transparent">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.2-5.2m0 0A7.5 7.5 0 105.2 5.2a7.5 7.5 0 0010.6 10.6zM10.5 7.5v6m3-3h-6" />
+            </svg>
+        </button>
+
+        <button type="button" (click)="resetZoom()" [disabled]="scale() === 1" title="Ajustar a pantalla (0)" aria-label="Ajustar a pantalla"
+            class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full hover:bg-white/10 disabled:cursor-default disabled:text-white/35 disabled:hover:bg-transparent">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+            </svg>
+        </button>
+
+        <span class="mx-1.5 h-5 w-px bg-white/25"></span>
+
+        <button type="button" (click)="descargar()" [disabled]="downloading()" title="Descargar" aria-label="Descargar"
+            class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full hover:bg-white/10 disabled:cursor-default disabled:text-white/35 disabled:hover:bg-transparent">
+            @if (downloading()) {
+            <svg class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+            </svg>
+            } @else {
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+            }
+        </button>
+
+        @if (hasMultiple) {
+        <span class="mx-1.5 h-5 w-px bg-white/25"></span>
+        <span class="min-w-10 text-center tabular-nums opacity-85">{{ currentIndex() + 1 }} / {{ data.images.length }}</span>
+        }
+    </div>
+</div>

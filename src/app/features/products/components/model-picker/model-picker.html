@@ -1,0 +1,51 @@
+<div class="space-y-2">
+  <!-- Seleccionados -->
+  <div class="flex flex-wrap gap-1.5">
+    @for (m of selected(); track m.id) {
+      <span class="inline-flex items-center gap-1 rounded-full bg-teal-500/15 px-2.5 py-0.5 text-xs font-medium text-teal-700 dark:text-teal-300">
+        {{ m.brandName }} · {{ m.name }}
+        <button type="button" class="cursor-pointer leading-none opacity-70 hover:opacity-100"
+          [attr.aria-label]="'Quitar ' + m.name" (click)="remove(m.id)">×</button>
+      </span>
+    } @empty {
+      <span class="text-sm text-text-subtle">Sin modelos seleccionados</span>
+    }
+  </div>
+
+  <!-- Marca + búsqueda -->
+  <div class="grid gap-2 sm:grid-cols-[12rem_1fr]">
+    <select class="input-field" aria-label="Marca" (change)="onBrand($any($event.target).value)">
+      <option value="">Marca...</option>
+      @for (b of brands(); track b.id) {
+        <option [value]="b.id">{{ b.name }}</option>
+      }
+    </select>
+    <input type="text" class="input-field" [formControl]="search" autocomplete="off"
+      [readonly]="brandId() === null"
+      [placeholder]="brandId() === null ? 'Primero elige una marca' : 'Buscar modelo...'" />
+  </div>
+
+  <!-- Resultados (en línea, sin overlay) -->
+  @if (brandId() !== null) {
+    <div class="max-h-48 overflow-y-auto rounded-xl border border-border bg-surface">
+      @if (loading()) {
+        <p class="px-4 py-3 text-sm text-body">Cargando modelos...</p>
+      }
+      @for (m of results(); track m.id) {
+        <button type="button" (click)="toggle(m)"
+          class="flex w-full cursor-pointer items-center justify-between px-4 py-2 text-left text-sm hover:bg-surface-hover">
+          <span class="text-heading">{{ m.name }}</span>
+          @if (isSelected(m.id)) {
+            <svg class="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
+          }
+        </button>
+      } @empty {
+        @if (!loading()) {
+          <p class="px-4 py-3 text-sm text-body">Sin resultados.</p>
+        }
+      }
+    </div>
+  }
+</div>

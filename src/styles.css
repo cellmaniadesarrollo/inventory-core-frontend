@@ -1,1 +1,226 @@
-/* You can add global styles to this file, and also import other style files */
+@import "tailwindcss";
+@import "@angular/cdk/overlay-prebuilt.css";
+@import 'flatpickr/dist/flatpickr.min.css';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ===== TEMA CLARO (Enfoque Contraste Elevado) ===== */
+@theme {
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-active: #1e40af;
+  --color-primary-soft: #eff6ff;
+
+  /* CAMBIO: Un fondo un poco más frío y limpio */
+  --color-bg: #dbe7ff;        
+
+  /* SOLUCIÓN: Pasamos de blanco (#fff) a un azul sutilmente más denso y elegante */
+  --color-surface: #e4eefd;     
+  
+  /* CAMBIO: Ajustados para armonizar con la nueva superficie */
+  --color-surface-hover: #d2e4ff; 
+  --color-border: #bdcef0;      
+
+  /* TEXTOS EN TONOS AZULES */
+  --color-text: #0f2970;        /* Azul Marino más oscuro para máxima legibilidad */
+  --color-text-muted: #2563eb;  /* Azul Eléctrico base */
+  --color-text-subtle: #4b86f4; /* Azul Claro Intenso */
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --breakpoint-xs: 480px;
+}
+
+/* ===== TEMA OSCURO (Más Profundo y Premium) ===== */
+.dark {
+  --color-primary: #3b82f6;
+  --color-primary-hover: #60a5fa;
+  --color-primary-active: #2563eb;
+  --color-primary-soft: rgba(59, 130, 246, 0.2);
+
+  /* CAMBIO: Contenedores aún más oscuros que el fondo de la app */
+  --color-bg: #0f172a;            /* Fondo general oscuro */
+  --color-surface: #030712;       /* Barras súper oscuras (Casi negro / Gray 950) */
+  --color-surface-hover: #111827; /* Hover interno */
+  --color-border: #1f2937;        /* Bordes muy sutiles */
+
+  /* TEXTOS EN TEMA OSCURO */
+  --color-text: #f9fafb;          /* Contraste alto */
+  --color-text-muted: #9ca3af;    /* Secundarios */
+  --color-text-subtle: #60a5fa;   /* Sutiles/Enlaces */
+}
+
+/* ===== BASE / RESET GLOBAL ===== */
+@layer base {
+  html { font-family: var(--font-sans); }
+  body {
+    background-color: var(--color-bg);
+    /* Usamos un color de texto base para el contenido de la página */
+    color: #1e293b; 
+    min-height: 100dvh;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+  .dark body {
+    color: #f3f4f6;
+  }
+}
+
+/* ===== COMPONENTES REUTILIZABLES ===== */
+@layer components {
+  .text-heading { @apply text-text font-semibold; }
+  .text-body { @apply text-text-muted; }
+  .text-subtle { @apply text-text-subtle; }
+
+  /* --- Ítems de navegación --- */
+  .nav-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium
+           text-text-muted transition-all duration-200;
+  }
+  .nav-item:hover {
+    @apply bg-surface-hover text-text;
+  }
+  .nav-item-active {
+    @apply bg-primary text-white font-semibold shadow-md shadow-primary/20;
+  }
+  .nav-item-active svg { @apply text-white; }
+
+  .nav-subitem {
+    @apply block px-4 py-2 rounded-xl text-sm text-text-muted transition-all duration-150;
+  }
+  .nav-subitem:hover {
+    @apply bg-surface-hover text-text pl-5;
+  }
+  .nav-subitem-active {
+    @apply bg-primary-soft text-primary font-medium;
+  }
+
+  /* --- CORRECCIÓN CRÍTICA FLYOUT --- */
+  .nav-flyout {
+    @apply hidden absolute left-full top-0 ml-3 w-56
+           bg-surface border border-border rounded-2xl shadow-xl p-2.5 z-50;
+  }
+  /* --- Inputs, Selects y Textareas del Formulario --- */
+  .input-field {
+    @apply w-full px-4 py-2.5 rounded-xl border bg-surface text-text font-medium text-sm
+           border-border placeholder:text-text-subtle/70
+           focus:outline-hidden focus:border-primary focus:ring-2 focus:ring-primary/20 
+           disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200;
+  }
+    .input-field.ng-invalid.ng-touched {
+    @apply border-red-500 focus:border-red-500 focus:ring-red-500/20;
+  }
+  /* Ajuste para selectores nativos */
+  select.input-field {
+    @apply pr-8 cursor-pointer;
+  }
+
+  /* --- Botones del Formulario --- */
+  .btn-primary {
+    @apply flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
+           bg-primary text-white hover:bg-primary-hover active:bg-primary-active
+           disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shadow-primary/10
+           transition-all duration-150 cursor-pointer;
+  }
+
+  /* --- Estilo personalizado para el contenedor flotante de sugerencias --- */
+  .suggestions-box {
+    @apply absolute z-30 mt-1 w-full bg-surface border border-border rounded-xl shadow-xl 
+           max-h-64 overflow-y-auto divide-y divide-border/60 backdrop-blur-md;
+  }
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(1rem); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.animate-in {
+  animation: toast-in 0.2s ease-out;
+}
+.surface-card {
+  @apply bg-surface border border-border rounded-2xl;
+}
+
+/* agregar en styles.css, junto a @keyframes toast-in */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96) translateY(4px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.animate-fade-in {
+  animation: fade-in 0.15s ease-out;
+}
+.animate-scale-in {
+  animation: scale-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+  /* ===== SCROLLBARS ===== */
+  :root {
+    color-scheme: light;
+    --scrollbar-thumb: color-mix(in srgb, var(--color-text-subtle) 45%, transparent);
+    --scrollbar-thumb-hover: color-mix(in srgb, var(--color-text-subtle) 75%, transparent);
+  }
+  .dark {
+    color-scheme: dark;
+  }
+
+  /* Chrome, Edge, Safari y Brave */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    border-radius: 9999px;
+    /* borde transparente = el thumb queda "flotando" con margen */
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover);
+  }
+  ::-webkit-scrollbar-thumb:active {
+    background-color: var(--color-primary);
+  }
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  /* Firefox (y navegadores sin ::-webkit-scrollbar) */
+  @supports not selector(::-webkit-scrollbar) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--scrollbar-thumb) transparent;
+    }
+  }
+
+  
+
+
+  @layer components {
+  /* --- Fila-tarjeta con columnas etiquetadas (listados) --- */
+  .row-card {
+    @apply flex flex-wrap items-start gap-x-4 gap-y-3 rounded-xl border border-border bg-surface p-4
+           transition-all duration-150 hover:border-primary/30 hover:shadow-md;
+  }
+  .row-col {
+    @apply flex min-w-0 flex-col gap-1;
+  }
+  .col-label {
+    @apply block whitespace-nowrap text-[10.5px] font-semibold uppercase tracking-wide text-text-subtle;
+  }
+  .col-valor {
+    @apply text-sm text-text break-words;
+  }
+
+  /* En móvil cada columna ocupa todo el ancho y se apila */
+  @media (max-width: 639px) {
+    .row-col {
+      flex: 1 1 100%;
+      width: 100%;
+    }
+  }
+}

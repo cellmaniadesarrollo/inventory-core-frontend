@@ -1,0 +1,101 @@
+<div class="surface-card flex max-h-[95dvh] flex-col shadow-2xl">
+  <!-- Cabecera -->
+  <div class="flex shrink-0 items-center justify-between border-b border-border px-6 py-4">
+    <h2 class="text-lg font-bold text-heading">Tomar foto</h2>
+    <button
+      type="button"
+      (click)="cancel()"
+      class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-border text-body transition-colors hover:bg-bg hover:text-heading"
+      aria-label="Cerrar"
+    >
+      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+
+  <!-- Visor -->
+  <div class="relative min-h-48 flex-1 overflow-hidden bg-black">
+    <video
+      #video
+      playsinline
+      muted
+      autoplay
+      class="mx-auto max-h-[65dvh] w-full object-contain"
+      [class.-scale-x-100]="facing() === 'user'"
+      [class.invisible]="status() !== 'live'"
+    ></video>
+
+    @if (status() === 'starting') {
+      <div class="absolute inset-0 flex items-center justify-center text-sm text-white/80">
+        Iniciando cámara...
+      </div>
+    }
+
+    @if (status() === 'error') {
+      <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center text-white">
+        <p class="text-sm">{{ error() }}</p>
+        <button
+          type="button"
+          (click)="start()"
+          class="cursor-pointer rounded-xl border border-white/40 px-4 py-2 text-sm font-semibold transition-colors hover:bg-white/10"
+        >
+          Reintentar
+        </button>
+      </div>
+    }
+  </div>
+
+  @if (error() && status() !== 'error') {
+    <p class="px-6 pt-3 text-xs text-red-500" role="alert">{{ error() }}</p>
+  }
+
+  <!-- Controles -->
+  <div class="shrink-0 border-t border-border px-6 py-4">
+    @if (photo()) {
+      <div class="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          (click)="retake()"
+          class="cursor-pointer rounded-xl border border-border px-5 py-2.5 text-sm font-semibold text-body transition-colors hover:bg-surface-hover hover:text-heading"
+        >
+          Repetir
+        </button>
+        <button type="button" (click)="use()" class="btn-primary">Usar foto</button>
+      </div>
+    } @else {
+      <div class="grid grid-cols-3 items-center">
+        <button
+          type="button"
+          (click)="cancel()"
+          class="cursor-pointer justify-self-start rounded-xl border border-border px-5 py-2.5 text-sm font-semibold text-body transition-colors hover:bg-surface-hover hover:text-heading"
+        >
+          Cancelar
+        </button>
+
+        <button
+          type="button"
+          (click)="capture()"
+          [disabled]="status() !== 'live'"
+          aria-label="Capturar foto"
+          class="h-14 w-14 cursor-pointer justify-self-center rounded-full border-4 border-border bg-primary ring-2 ring-primary/40 transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+        ></button>
+
+        <div class="justify-self-end">
+          @if (multipleCameras()) {
+            <button
+              type="button"
+              (click)="flip()"
+              aria-label="Cambiar de cámara"
+              class="flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-border text-body transition-colors hover:bg-surface-hover hover:text-heading"
+            >
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+              </svg>
+            </button>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>

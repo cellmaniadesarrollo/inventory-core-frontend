@@ -1,0 +1,170 @@
+<div class="min-h-screen grid lg:grid-cols-2 bg-bg">
+  <!-- Panel de marca (sin cambios respecto a la versión anterior) -->
+  <aside
+    class="relative hidden lg:flex flex-col justify-between overflow-hidden bg-linear-to-br from-slate-900 via-blue-900 to-indigo-800 p-12 text-white"
+  >
+    <div class="absolute -top-24 -left-24 h-96 w-96 rounded-full bg-blue-500/30 blur-3xl"></div>
+    <div class="absolute -bottom-32 -right-24 h-112 w-md rounded-full bg-indigo-400/20 blur-3xl"></div>
+    <div
+      class="absolute inset-0 opacity-[0.07]"
+      style="background-image: linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px); background-size: 40px 40px;"
+    ></div>
+
+    <div class="relative flex items-center gap-3">
+      <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 backdrop-blur ring-1 ring-white/20">
+        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+        </svg>
+      </div>
+      <span class="text-xl font-semibold tracking-tight">Inventario MS</span>
+    </div>
+
+    <div class="relative max-w-md">
+      <h2 class="text-4xl font-bold leading-tight">
+        Controla tu inventario <span class="text-blue-300">en tiempo real</span>.
+      </h2>
+      <p class="mt-4 text-blue-100/80">
+        Productos, stock y movimientos de todas tus sucursales en un solo lugar.
+      </p>
+      <ul class="mt-8 space-y-4 text-sm">
+        @for (f of ['Stock actualizado por sucursal', 'Entradas y salidas trazables', 'Reportes y alertas de stock bajo']; track f) {
+          <li class="flex items-center gap-3">
+            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-400/20 text-emerald-300 ring-1 ring-emerald-300/30">
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+              </svg>
+            </span>
+            {{ f }}
+          </li>
+        }
+      </ul>
+    </div>
+
+    <p class="relative text-xs text-blue-200/60">© {{ year }} Inventario MS. Todos los derechos reservados.</p>
+  </aside>
+
+  <!-- Formulario -->
+  <main class="relative flex items-center justify-center px-6 py-12">
+    <div class="absolute right-4 top-4">
+      <app-theme-toggle />
+    </div>
+
+    <div class="w-full max-w-md">
+      <div class="lg:hidden mb-8 flex items-center justify-center gap-2 text-heading">
+        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white">
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+          </svg>
+        </div>
+        <span class="text-xl font-semibold">Inventario MS</span>
+      </div>
+
+      <div class="surface-card p-8 shadow-xl shadow-primary/5 sm:p-10">
+        <h1 class="text-2xl font-bold text-heading">Bienvenido de nuevo 👋</h1>
+        <p class="mt-1 text-sm text-body">Ingresa tus credenciales para acceder al panel.</p>
+
+        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="mt-8 space-y-5">
+          @if (error()) {
+            <div class="flex items-start gap-2 rounded-xl border border-red-300/60 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400" role="alert">
+              <svg class="mt-0.5 h-4 w-4 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+              </svg>
+              <span>{{ error() }}</span>
+            </div>
+          }
+
+          <!-- Usuario -->
+          <div>
+            <label for="username" class="mb-1.5 block text-sm font-medium text-heading">Usuario</label>
+            <div class="relative">
+              <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-text-subtle">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.118a7.5 7.5 0 0115 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.5-1.632z" />
+                </svg>
+              </span>
+              <input
+                id="username"
+                type="text"
+                formControlName="username"
+                autocomplete="username"
+                placeholder="tu.usuario"
+                class="input-field pl-10"
+              />
+            </div>
+            @if (form.controls.username.touched && form.controls.username.invalid) {
+              <p class="mt-1 text-xs text-red-500">El usuario es obligatorio</p>
+            }
+          </div>
+
+          <!-- Contraseña -->
+          <div>
+            <label for="password" class="mb-1.5 block text-sm font-medium text-heading">Contraseña</label>
+            <div class="relative">
+              <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-text-subtle">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                </svg>
+              </span>
+              <input
+                id="password"
+                [type]="showPassword() ? 'text' : 'password'"
+                formControlName="password"
+                autocomplete="current-password"
+                placeholder="••••••••"
+                class="input-field pl-10 pr-11"
+              />
+              <button
+                type="button"
+                (click)="showPassword.set(!showPassword())"
+                class="absolute inset-y-0 right-3 flex items-center text-text-subtle transition hover:text-text"
+                [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+              >
+                @if (showPassword()) {
+                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                  </svg>
+                } @else {
+                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                }
+              </button>
+            </div>
+            @if (form.controls.password.touched && form.controls.password.invalid) {
+              <p class="mt-1 text-xs text-red-500">La contraseña es obligatoria</p>
+            }
+          </div>
+
+          <!-- Recordarme -->
+          <label class="flex cursor-pointer select-none items-center gap-2 text-sm text-body">
+            <input
+              type="checkbox"
+              formControlName="remember"
+              class="h-4 w-4 rounded border-border accent-primary"
+            />
+            Mantener sesión iniciada (30 días)
+          </label>
+
+          <!-- Botón -->
+          <button type="submit" [disabled]="loading()" class="btn-primary w-full py-3">
+            @if (loading()) {
+              <svg class="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+              </svg>
+              Ingresando...
+            } @else {
+              Ingresar
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+              </svg>
+            }
+          </button>
+        </form>
+      </div>
+
+      <p class="mt-6 text-center text-xs text-text-subtle lg:hidden">© {{ year }} Inventario MS</p>
+    </div>
+  </main>
+</div>

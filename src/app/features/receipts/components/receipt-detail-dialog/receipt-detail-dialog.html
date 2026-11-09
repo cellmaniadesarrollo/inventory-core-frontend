@@ -1,0 +1,514 @@
+<div class="surface-card flex max-h-[92dvh] flex-col overflow-hidden rounded-3xl shadow-2xl ring-1 ring-border/50">
+
+    <!-- ===== Cabecera ===== -->
+    <div
+        class="relative shrink-0 overflow-hidden border-b border-border bg-gradient-to-br from-primary/15 via-surface to-surface">
+        <div class="pointer-events-none absolute -right-10 -top-12 h-44 w-44 rounded-full bg-primary/15 blur-3xl"></div>
+
+        <div class="relative flex items-start gap-4 px-6 pb-4 pt-5">
+            @if (detail(); as d) {
+            <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                    <h2 class="text-xl font-bold tracking-tight text-heading">Ingreso #{{ d.code }}</h2>
+                    <span class="rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+                        [class]="statusClass(d.status)">{{ statusLabel(d.status) }}</span>
+                    <span class="rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+                        [class]="paymentClass(d.payment.status)">{{ paymentLabel(d.payment.status) }}</span>
+                </div>
+                <p class="mt-1 truncate text-sm font-semibold text-heading">{{ d.supplier.businessName }}</p>
+                <p class="font-mono text-xs text-body">{{ d.documentType.name }} {{ d.documentNumber || 'S/N' }} · {{
+                    fmtDate(d.issueDate) }}</p>
+
+                <div class="mt-3 flex flex-wrap gap-1.5">
+                    @for (r of [
+                    { l: 'Sucursal', v: d.branch.name },
+                    { l: 'Origen', v: sourceLabel(d.source) },
+                    { l: 'Productos', v: '' + d.lines.length }
+                    ]; track r.l) {
+                    <span
+                        class="inline-flex items-center gap-1.5 rounded-lg bg-surface/70 px-2.5 py-1 text-[11px] ring-1 ring-border/60 backdrop-blur">
+                        <span class="text-text-subtle">{{ r.l }}</span>
+                        <span class="font-semibold text-heading">{{ r.v }}</span>
+                    </span>
+                    }
+                </div>
+            </div>
+            } @else {
+            <div class="flex-1">
+                <h2 class="text-xl font-bold text-heading">Ingreso</h2>
+            </div>
+            }
+
+            <button type="button" (click)="close()" aria-label="Cerrar"
+                class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-border bg-surface/70 text-body backdrop-blur transition-colors hover:bg-surface-hover hover:text-heading">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    @if (loading()) {
+    <div class="animate-pulse space-y-4 px-6 py-6">
+        <div class="h-24 rounded-2xl bg-surface-hover"></div>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div class="h-36 rounded-2xl bg-surface-hover"></div>
+            <div class="h-36 rounded-2xl bg-surface-hover"></div>
+        </div>
+    </div>
+    } @else if (!detail()) {
+    <div class="px-6 py-8 text-sm text-red-500">{{ error() }}</div>
+    } @else {
+    @let d = detail()!;
+
+    <!-- ===== Pestañas ===== -->
+    <div class="shrink-0 px-6 pt-3">
+        <div class="inline-flex gap-1 rounded-xl bg-surface-hover/70 p-1">
+            @for (t of tabs; track t.id) {
+            <button type="button" (click)="tab.set(t.id)"
+                class="cursor-pointer rounded-lg px-3.5 py-1.5 text-sm font-semibold transition-all"
+                [class]="tab() === t.id ? 'bg-surface text-primary shadow-sm ring-1 ring-border/60' : 'text-body hover:text-heading'">
+                {{ t.label }}
+            </button>
+            }
+        </div>
+    </div>
+
+    <div class="flex-1 space-y-3 overflow-y-auto px-6 py-4">
+        @if (notice()) {
+        <div class="rounded-xl border border-emerald-300/60 bg-emerald-500/10 px-4 py-2.5 text-sm text-emerald-700 shadow-sm dark:text-emerald-400"
+            role="status">{{ notice() }}</div>
+        }
+        @if (error()) {
+        <div class="rounded-xl border border-red-300/60 bg-red-500/10 px-4 py-2.5 text-sm text-red-600 shadow-sm dark:text-red-400"
+            role="alert">{{ error() }}</div>
+        }
+        @if (voided()) {
+        <div
+            class="rounded-xl border border-red-300/60 bg-red-500/10 px-4 py-2.5 text-sm text-red-600 dark:text-red-400">
+            Ingreso anulado{{ d.trace.voidReason ? ': ' + d.trace.voidReason : '' }}
+        </div>
+        }
+
+        @switch (tab()) {
+
+        <!-- ===== RESUMEN ===== -->
+        @case ('summary') {
+        <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            @for (t of [
+            { l: 'Subtotal', v: d.totals.subtotal },
+            { l: 'Descuento', v: d.totals.discountTotal },
+            { l: 'Impuesto', v: d.totals.taxTotal },
+            { l: 'Total', v: d.totals.total }
+            ]; track t.l) {
+            <div class="rounded-xl border border-border/70 bg-surface/30 px-3 py-2">
+                <span class="block text-[10px] font-medium uppercase tracking-wider text-text-subtle">{{ t.l }}</span>
+                <span class="text-sm font-bold tabular-nums"
+                    [class]="t.l === 'Total' ? 'text-emerald-700 dark:text-emerald-300' : 'text-heading'">{{ t.v
+                    }}</span>
+            </div>
+            }
+        </div>
+
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <section class="rounded-xl border border-border/70 bg-surface/30 px-3 py-2">
+                <h3 class="mb-1 text-[11px] font-semibold uppercase tracking-wider text-text-subtle">Proveedor</h3>
+                <div class="divide-y divide-border/40 text-sm">
+                    @for (r of [
+                    { l: 'Razón social', v: d.supplier.businessName },
+                    { l: 'Nombre comercial', v: d.supplier.tradeName || '—' },
+                    { l: d.supplier.identificationType, v: d.supplier.identificationNumber },
+                    { l: 'Código', v: '#' + d.supplier.code },
+                    { l: 'Teléfono', v: d.supplier.phone || '—' },
+                    { l: 'Correo', v: d.supplier.email || '—' },
+                    { l: 'Dirección', v: d.supplier.address }
+                    ]; track r.l) {
+                    <div class="flex items-start gap-2 py-1.5">
+                        <span class="w-28 shrink-0 pt-px text-[11px] text-text-subtle">{{ r.l }}</span>
+                        <span class="min-w-0 flex-1 break-words font-semibold text-heading">{{ r.v }}</span>
+                    </div>
+                    }
+                </div>
+            </section>
+
+            <section class="rounded-xl border border-border/70 bg-surface/30 px-3 py-2">
+                <h3 class="mb-1 text-[11px] font-semibold uppercase tracking-wider text-text-subtle">Documento</h3>
+                <div class="divide-y divide-border/40 text-sm">
+                    @for (r of [
+                    { l: 'Tipo', v: d.documentType.name },
+                    { l: 'Número', v: d.documentNumber || 'S/N' },
+                    { l: 'Emisión', v: fmtDate(d.issueDate) },
+                    { l: 'Notas', v: d.notes || '—' }
+                    ]; track r.l) {
+                    <div class="flex items-start gap-2 py-1.5">
+                        <span class="w-28 shrink-0 pt-px text-[11px] text-text-subtle">{{ r.l }}</span>
+                        <span class="min-w-0 flex-1 break-words font-semibold text-heading">{{ r.v }}</span>
+                    </div>
+                    }
+                </div>
+
+                @if (d.document; as f) {
+                <div class="mt-2 flex items-center gap-3 rounded-lg border border-border/60 bg-surface/50 p-2">
+                    @if (isPdf(f)) {
+                    <div
+                        class="flex h-14 w-14 shrink-0 items-center justify-center rounded-md bg-surface-hover text-xs font-bold text-text-subtle">
+                        PDF</div>
+                    } @else {
+                    <img [src]="f.url" [alt]="f.originalName" (click)="openImages([f], 0)"
+                        class="h-14 w-14 shrink-0 cursor-zoom-in rounded-md border border-border object-cover" />
+                    }
+                    <div class="min-w-0 flex-1">
+                        <p class="truncate text-xs font-semibold text-heading" [attr.title]="f.originalName">{{
+                            f.originalName }}</p>
+                        <p class="text-[11px] text-text-subtle">{{ size(f.sizeBytes) }}</p>
+                    </div>
+                    <a [href]="f.url" target="_blank" rel="noopener"
+                        class="shrink-0 rounded-lg border border-border px-2.5 py-1 text-xs font-semibold text-body transition-colors hover:border-primary hover:text-primary">
+                        Abrir
+                    </a>
+                </div>
+                } @else {
+                <p class="mt-2 text-xs text-text-subtle">Sin documento adjunto.</p>
+                }
+
+                @if (d.accessKey; as key) {
+                <div class="mt-2 space-y-1.5 rounded-lg border border-border/60 bg-surface/50 p-2.5">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-[11px] font-semibold uppercase tracking-wider text-text-subtle">Clave de acceso</span>
+                        <button type="button" (click)="copyKey(key)"
+                            class="cursor-pointer rounded-lg border border-border px-2 py-0.5 text-[11px] font-semibold text-body transition-colors hover:border-primary hover:text-primary">
+                            Copiar
+                        </button>
+                    </div>
+                    <p class="break-all font-mono text-[11px] text-heading">{{ fmtKey(key) }}</p>
+
+                    @if (d.authorizationNumber) {
+                    <p class="text-[11px] text-text-subtle">
+                        Autorización: <span class="font-mono text-heading">{{ d.authorizationNumber }}</span>
+                        @if (d.authorizationDate) { · {{ d.authorizationDate | date: 'dd/MM/yyyy HH:mm' }} }
+                    </p>
+                    }
+
+                    @if (d.hasSourceXml) {
+                    <span class="inline-block rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-300">XML del SRI guardado</span>
+                    } @else {
+                    <span class="inline-block rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">Sin XML: el SRI no respondió al guardar</span>
+                    }
+                </div>
+                }
+            </section>
+
+            <section class="rounded-xl border border-border/70 bg-surface/30 px-3 py-2 sm:col-span-2">
+                <h3 class="mb-1 text-[11px] font-semibold uppercase tracking-wider text-text-subtle">Trazabilidad</h3>
+                <div class="grid grid-cols-1 gap-x-4 text-sm sm:grid-cols-3">
+                    <div class="py-1.5">
+                        <span class="block text-[11px] text-text-subtle">Registrado</span>
+                        <span class="font-semibold text-heading">{{ d.trace.createdAt | date: 'dd/MM/yyyy HH:mm'
+                            }}</span>
+                        <span class="block font-mono text-[10px] text-text-subtle">{{ d.trace.createdById ?? 'sistema'
+                            }}</span>
+                    </div>
+                    <div class="py-1.5">
+                        <span class="block text-[11px] text-text-subtle">Verificado</span>
+                        @if (d.trace.verifiedAt) {
+                        <span class="font-semibold text-heading">{{ d.trace.verifiedAt | date: 'dd/MM/yyyy HH:mm'
+                            }}</span>
+                        <span class="block font-mono text-[10px] text-text-subtle">{{ d.trace.verifiedById }}</span>
+                        } @else {
+                        <span class="text-text-subtle">Pendiente</span>
+                        }
+                    </div>
+                    @if (d.trace.voidedAt) {
+                    <div class="py-1.5">
+                        <span class="block text-[11px] text-text-subtle">Anulado</span>
+                        <span class="font-semibold text-red-600 dark:text-red-400">{{ d.trace.voidedAt | date:
+                            'dd/MM/yyyy HH:mm' }}</span>
+                        <span class="block font-mono text-[10px] text-text-subtle">{{ d.trace.voidedById }}</span>
+                    </div>
+                    }
+                </div>
+            </section>
+        </div>
+        }
+
+        <!-- ===== PRODUCTOS ===== -->
+        @case ('products') {
+        @if (d.unitsTruncated) {
+        <div
+            class="rounded-xl border border-amber-300/60 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-700 dark:text-amber-300">
+            Hay muchos equipos: solo se muestra una parte de los seriales.
+        </div>
+        }
+@if (printableLines().length) {
+<div class="flex justify-end">
+  <button type="button" (click)="openLabels()" [disabled]="voided()"
+    class="cursor-pointer rounded-xl border border-border bg-surface px-3.5 py-1.5 text-xs font-semibold text-body transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50">
+    Imprimir etiquetas
+  </button>
+</div>
+}
+        @for (l of d.lines; track l.id) {
+        <article class="space-y-3 rounded-2xl border border-border/70 bg-surface/30 p-3.5">
+            <div class="flex items-start gap-2">
+                <span
+                    class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[11px] font-bold text-primary">{{
+                    l.lineNo }}</span>
+                <div class="min-w-0 flex-1 space-y-1">
+                    @if (l.product; as p) {
+                    <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <h4 class="truncate text-sm font-semibold text-heading">{{ p.name }}</h4>
+                        <span class="rounded-full bg-primary-soft px-2 py-0.5 text-[10px] font-medium text-primary">{{ kindLabel(p.kind) }}</span>
+                        <span class="font-mono text-[11px] text-text-subtle">{{ p.sku }}</span>
+                    </div>
+                    @if (p.models.length) {
+                    <div class="flex flex-wrap gap-1">
+                        @for (m of p.models.slice(0, 4); track m.id) {
+                        <span class="rounded-full bg-teal-500/15 px-2 py-0.5 text-[10px] font-medium text-teal-700 dark:text-teal-300">{{ m.brand }} · {{ m.name }}</span>
+                        }
+                        @if (p.models.length > 4) {
+                        <span class="rounded-full bg-teal-500/15 px-2 py-0.5 text-[10px] font-medium text-teal-700 dark:text-teal-300">+{{ p.models.length - 4 }}</span>
+                        }
+                    </div>
+                    }
+                    } @else {
+                    <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <h4 class="truncate text-sm font-semibold text-heading">{{ l.description }}</h4>
+                        <span class="rounded-full bg-surface-hover px-2 py-0.5 text-[10px] font-medium text-body">Sin inventario</span>
+                    </div>
+                    }
+                </div>
+                <div class="shrink-0 text-right">
+                    <span class="block text-[10px] uppercase text-text-subtle">Subtotal</span>
+                    <span class="text-sm font-bold tabular-nums text-heading">{{ l.purchase.subtotal }}</span>
+                </div>
+            </div>
+
+            <!-- Compra -->
+            <div class="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                @for (c of [
+                { l: 'Cantidad', v: '' + l.quantity },
+                { l: 'Costo unit.', v: l.purchase.unitCost },
+                { l: 'Descuento', v: l.purchase.discount },
+                { l: 'IVA %', v: l.purchase.taxRate ?? '—' },
+                { l: 'Impuesto', v: l.purchase.taxAmount },
+                { l: 'Cód. imp.', v: l.purchase.taxCode ?? '—' }
+                ]; track c.l) {
+                <div class="rounded-lg bg-surface/50 px-2 py-1.5 ring-1 ring-border/50">
+                    <span class="block text-[10px] uppercase tracking-wider text-text-subtle">{{ c.l }}</span>
+                    <span class="text-xs font-semibold tabular-nums text-heading">{{ c.v }}</span>
+                </div>
+                }
+            </div>
+
+            <!-- Venta y lote (solo si afecta inventario y tiene lotConfig) -->
+            @if (l.affectsInventory && l.lotConfig; as cfg) {
+            <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div class="rounded-xl border border-border/60 bg-surface/40 p-2.5 text-xs">
+                    <h5 class="mb-1 text-[10px] font-semibold uppercase tracking-wider text-text-subtle">Configuración de venta</h5>
+                    <p class="text-heading">Precio <b class="tabular-nums">{{ cfg.salePrice }}</b> · Garantía <b>{{ cfg.warrantyDays }} d</b></p>
+                    <div class="mt-1.5 flex flex-wrap gap-1">
+                        @if (cfg.hasTax) { <span class="rounded-full bg-surface-hover px-2 py-0.5 text-[10px] text-body">Con impuesto</span> }
+                        @if (cfg.priceIncludesTax) { <span class="rounded-full bg-surface-hover px-2 py-0.5 text-[10px] text-body">Precio incluye imp.</span> }
+                        @if (cfg.billableInSales) { <span class="rounded-full bg-surface-hover px-2 py-0.5 text-[10px] text-body">Facturable en ventas</span> }
+                        @if (cfg.billableInRepairOrders) { <span class="rounded-full bg-surface-hover px-2 py-0.5 text-[10px] text-body">Facturable en reparaciones</span> }
+                    </div>
+                </div>
+
+                <div class="rounded-xl border border-border/60 bg-surface/40 p-2.5 text-xs">
+                    <h5 class="mb-1 text-[10px] font-semibold uppercase tracking-wider text-text-subtle">Lote</h5>
+                    @if (l.lot; as lot) {
+                    <p class="text-heading">Lote <b>#{{ lot.code }}</b> · Costo neto <b class="tabular-nums">{{ lot.netUnitCost }}</b></p>
+                    <div class="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-body tabular-nums">
+                        <span>Recibidos <b class="text-heading">{{ lot.quantityReceived }}</b></span>
+                        <span>Disponibles <b class="text-emerald-700 dark:text-emerald-300">{{ lot.available }}</b></span>
+                        <span>Reservados <b class="text-heading">{{ lot.reserved }}</b></span>
+                        <span>Consumidos <b class="text-heading">{{ lot.consumed }}</b></span>
+                    </div>
+                    } @else {
+                    <p class="text-text-subtle">Sin lote asociado.</p>
+                    }
+                </div>
+            </div>
+            }
+
+            <!-- Equipos con seriales -->
+            @if (l.units?.length) {
+            <div class="space-y-1.5 rounded-xl border border-primary/30 bg-primary-soft/30 p-2.5">
+                <h5 class="text-[10px] font-semibold uppercase tracking-wider text-text-subtle">Equipos ({{
+                    l.units!.length }})</h5>
+                @for (u of l.units; track u.id; let i = $index) {
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="w-6 text-[11px] font-semibold text-text-subtle">#{{ i + 1 }}</span>
+                    @for (s of u.serials; track s) {
+                    <span
+                        class="rounded-md bg-surface px-2 py-0.5 font-mono text-xs text-heading ring-1 ring-border/60">{{
+                        s }}</span>
+                    }
+                    <span class="ml-auto rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                        [class]="unitClass(u.status)">{{ unitLabel(u.status) }}</span>
+                </div>
+                }
+            </div>
+            }
+
+            <!-- Fotos -->
+            @if (l.photos?.length) {
+            <div class="flex gap-2 overflow-x-auto p-1">
+                @for (p of l.photos; track p.id; let pi = $index) {
+                <img [src]="p.url" [alt]="p.originalName" loading="lazy" (click)="openImages(l.photos!, pi)"
+                    class="h-16 w-16 shrink-0 cursor-zoom-in rounded-lg border border-border object-cover shadow-sm" />
+                }
+            </div>
+            }
+        </article>
+        }
+        }
+
+        <!-- ===== PAGOS ===== -->
+        @case ('payments') {
+        <div
+            class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-surface/30 px-3 py-2.5">
+            <div class="grid grid-cols-3 gap-4 text-center">
+                <div>
+                    <span class="block text-[10px] font-medium uppercase text-text-subtle">Total</span>
+                    <span class="text-sm font-bold tabular-nums text-heading">{{ d.totals.total }}</span>
+                </div>
+                <div>
+                    <span class="block text-[10px] font-medium uppercase text-text-subtle">Pagado</span>
+                    <span class="text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-300">{{
+                        d.payment.paidTotal }}</span>
+                </div>
+                <div>
+                    <span class="block text-[10px] font-medium uppercase text-text-subtle">Saldo</span>
+                    <span class="text-sm font-bold tabular-nums text-amber-700 dark:text-amber-300">{{ d.payment.balance
+                        }}</span>
+                </div>
+            </div>
+
+            @if (d.payment.canRegisterPayment) {
+            <button type="button" (click)="openPayment()"
+                class="btn-primary rounded-xl px-4 py-2 text-sm font-semibold">Registrar pago</button>
+            }
+        </div>
+
+        @for (p of d.payment.items; track p.id) {
+        <div class="flex items-start gap-3 rounded-2xl border border-border/70 bg-surface/30 px-4 py-3"
+            [class.opacity-60]="p.voided">
+
+            <!-- Miniatura del comprobante -->
+            @if (isImageProof(p)) {
+            <button type="button" (click)="openProof(p)" [attr.aria-label]="'Ver comprobante ' + (p.proofName ?? '')"
+                class="shrink-0 cursor-zoom-in overflow-hidden rounded-lg border border-border shadow-sm transition hover:ring-2 hover:ring-primary/40">
+                <img [src]="p.proofUrl!" [alt]="p.proofName ?? 'Comprobante'" loading="lazy"
+                    class="h-16 w-16 object-cover" />
+            </button>
+            } @else if (p.hasProof && p.proofUrl) {
+            <a [href]="p.proofUrl" target="_blank" rel="noopener" [attr.title]="p.proofName"
+                class="flex h-16 w-16 shrink-0 flex-col items-center justify-center gap-0.5 rounded-lg border border-border bg-surface-hover text-text-subtle transition hover:border-primary hover:text-primary">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                </svg>
+                <span class="text-[10px] font-bold">PDF</span>
+            </a>
+            } @else {
+            <div
+                class="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-dashed border-border text-center text-[10px] leading-tight text-text-subtle">
+                Sin comprobante
+            </div>
+            }
+
+            <!-- Datos del pago -->
+            <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-base font-bold tabular-nums text-heading" [class.line-through]="p.voided">{{
+                            p.amount }}</span>
+                        <span class="rounded-full bg-primary-soft px-2 py-0.5 text-[10px] font-medium text-primary">{{
+                            methodLabel(p.method) }}</span>
+                        @if (p.voided) {
+                        <span
+                            class="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-semibold text-red-600 dark:text-red-400">Anulado</span>
+                        }
+                    </div>
+                    <span class="text-xs text-text-subtle">{{ fmtDate(p.paidAt) }}</span>
+                </div>
+
+                @if (p.reference || p.note) {
+                <p class="mt-1.5 text-xs text-body">
+                    @if (p.reference) { <span>Ref.: <span class="font-mono">{{ p.reference }}</span></span> }
+                    @if (p.reference && p.note) { · }
+                    @if (p.note) { <span>{{ p.note }}</span> }
+                </p>
+                }
+
+                @if (p.voided) {
+                <p class="mt-1 text-xs text-red-600 dark:text-red-400">
+                    Motivo: {{ p.voidReason }} · {{ p.voidedAt | date: 'dd/MM/yyyy HH:mm' }}
+                </p>
+                }
+
+                <p class="mt-1.5 text-[11px] text-text-subtle">
+                    Registrado {{ p.createdAt | date: 'dd/MM/yyyy HH:mm' }}
+                    @if (p.hasProof && p.proofName) { · {{ p.proofName }} }
+                </p>
+            </div>
+        </div>
+        } @empty {
+        <p class="py-6 text-center text-sm text-body">Aún no hay pagos registrados.</p>
+        }
+        }
+
+        <!-- ===== HISTORIAL ===== -->
+        @case ('history') {
+        <ol class="relative ml-3 space-y-5 border-l border-border/70 pt-1">
+            @for (e of d.history; track e.id) {
+            <li class="relative pl-6">
+                <span class="absolute -left-[7px] top-4 h-3 w-3 rounded-full ring-4 ring-surface"
+                    [class]="actionDot(e.action)"></span>
+                <div class="rounded-2xl border border-border/70 bg-surface/30 px-4 py-3.5 shadow-sm">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                            [class]="actionBadge(e.action)">{{ actionLabel(e.action) }}</span>
+                        <span class="text-xs text-text-subtle">{{ e.createdAt | date: 'dd/MM/yyyy HH:mm' }}</span>
+                    </div>
+                    <p class="mt-1.5 text-xs text-body">Usuario: <span class="font-mono">{{ e.userId ?? 'sistema'
+                            }}</span></p>
+
+                    @if (e.changes) {
+                    <ul class="mt-2.5 space-y-1.5 border-t border-border/40 pt-2.5 text-sm">
+                        @for (k of changeKeys(e); track k) {
+                        <li class="flex flex-wrap items-baseline gap-x-2">
+                            <span class="font-medium text-heading">{{ fieldLabel(k) }}:</span>
+                            @if (e.changes[k].from !== undefined) {
+                            <span class="rounded bg-red-500/10 px-1.5 text-red-600 line-through dark:text-red-400">{{
+                                formatValue(k, e.changes[k].from) }}</span>
+                            }
+                            @if (e.changes[k].to !== undefined) {
+                            <span
+                                class="rounded bg-emerald-500/10 px-1.5 font-medium text-emerald-700 dark:text-emerald-300">→
+                                {{ formatValue(k, e.changes[k].to) }}</span>
+                            }
+                        </li>
+                        }
+                    </ul>
+                    }
+                </div>
+            </li>
+            } @empty {
+            <p class="py-6 text-center text-sm text-body">Sin movimientos registrados.</p>
+            }
+        </ol>
+        }
+        }
+    </div>
+
+    <!-- ===== Pie ===== -->
+    <div class="flex shrink-0 items-center justify-end border-t border-border bg-surface px-6 py-3">
+        <button type="button" (click)="close()"
+            class="cursor-pointer rounded-xl border border-border px-5 py-2 text-sm font-semibold text-body transition-colors hover:bg-surface-hover hover:text-heading">
+            Cerrar
+        </button>
+    </div>
+    }
+</div>

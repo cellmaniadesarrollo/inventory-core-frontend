@@ -1,0 +1,17 @@
+<div class="relative w-full">
+  <div class="relative flex items-center">
+    <span class="absolute left-3 text-slate-400 pointer-events-none">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+      </svg>
+    </span>
+
+    <input 
+      #dateInput
+      type="text" 
+      [placeholder]="placeholder"
+      class="w-full pl-10 pr-4 py-2 text-xs bg-surface border border-border rounded-xl shadow-xs focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-heading placeholder-text-subtle cursor-pointer"
+      readonly
+    />
+  </div>
+</div>

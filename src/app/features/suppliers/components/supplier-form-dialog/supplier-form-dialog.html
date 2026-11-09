@@ -1,0 +1,150 @@
+<div class="surface-card flex max-h-[90dvh] flex-col overflow-hidden shadow-2xl">
+  <!-- Cabecera -->
+  <div class="flex shrink-0 items-center justify-between border-b border-border px-6 py-4">
+    <h2 class="text-lg font-bold text-heading">Nuevo proveedor</h2>
+    <button
+      type="button"
+      (click)="close()"
+      class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-border text-body transition-colors hover:bg-bg hover:text-heading"
+      aria-label="Cerrar"
+    >
+      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+
+  @if (loadingData()) {
+    <p class="px-6 py-12 text-center text-body">Cargando datos...</p>
+  } @else if (!data()) {
+    <div class="space-y-3 px-6 py-8">
+      <p class="text-sm text-red-500">{{ error() }}</p>
+      <button
+        type="button"
+        (click)="loadData()"
+        class="cursor-pointer text-sm font-semibold text-primary hover:underline"
+      >
+        Reintentar
+      </button>
+    </div>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="submit()" class="flex min-h-0 flex-1 flex-col">
+      <div class="flex-1 space-y-4 overflow-y-auto px-6 py-5">
+        @if (draftSource === 'SRI') {
+          <div class="rounded-xl bg-primary-soft px-4 py-2 text-xs text-primary">
+            Datos precargados desde la factura del SRI. Revisa y completa teléfono y correo.
+          </div>
+        } @else if (draftSource === 'ACCESS_KEY') {
+          <div class="rounded-xl border border-amber-300/60 bg-amber-500/10 px-4 py-2 text-xs text-amber-700 dark:text-amber-300">
+            El SRI no respondió: solo se conoce el RUC. Escribe la razón social y la dirección.
+          </div>
+        }
+
+        @if (error()) {
+          <div class="rounded-xl border border-red-300/60 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400" role="alert">
+            {{ error() }}
+          </div>
+        }
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <!-- Identificación -->
+          <div>
+            <label for="identificationType" class="mb-1.5 block text-sm font-medium text-heading">Tipo de identificación *</label>
+            <select id="identificationType" formControlName="identificationType" class="input-field">
+              <option value="">Selecciona...</option>
+              @for (t of data()!.identificationTypes; track t.value) {
+                <option [value]="t.value">{{ t.label }}</option>
+              }
+            </select>
+            @if (form.controls.identificationType.touched && form.controls.identificationType.invalid) {
+              <p class="mt-1 text-xs text-red-500">Selecciona un tipo de identificación</p>
+            }
+          </div>
+
+          <div>
+            <label for="identificationNumber" class="mb-1.5 block text-sm font-medium text-heading">Número de identificación *</label>
+            <input
+              id="identificationNumber"
+              formControlName="identificationNumber"
+              autocomplete="off"
+              class="input-field"
+            />
+            @if (form.controls.identificationNumber.touched && form.controls.identificationNumber.invalid) {
+              <p class="mt-1 text-xs text-red-500">El número de identificación es obligatorio (máx. 50)</p>
+            }
+          </div>
+
+          <!-- Nombres -->
+          <div class="sm:col-span-2">
+            <label for="businessName" class="mb-1.5 block text-sm font-medium text-heading">Razón social *</label>
+            <input id="businessName" formControlName="businessName" autocomplete="off" class="input-field" />
+            @if (form.controls.businessName.touched && form.controls.businessName.invalid) {
+              <p class="mt-1 text-xs text-red-500">La razón social es obligatoria (máx. 200)</p>
+            }
+          </div>
+
+          <div>
+            <label for="tradeName" class="mb-1.5 block text-sm font-medium text-heading">Nombre comercial</label>
+            <input id="tradeName" formControlName="tradeName" autocomplete="off" class="input-field" />
+            @if (form.controls.tradeName.touched && form.controls.tradeName.invalid) {
+              <p class="mt-1 text-xs text-red-500">Máximo 200 caracteres</p>
+            }
+          </div>
+
+          <div>
+            <label for="countryId" class="mb-1.5 block text-sm font-medium text-heading">País *</label>
+            <select id="countryId" formControlName="countryId" class="input-field">
+              <option value="">Selecciona...</option>
+              @for (c of data()!.countries; track c.id) {
+                <option [value]="c.id">{{ c.name }}</option>
+              }
+            </select>
+            @if (form.controls.countryId.touched && form.controls.countryId.invalid) {
+              <p class="mt-1 text-xs text-red-500">Selecciona un país</p>
+            }
+          </div>
+
+          <!-- Dirección -->
+          <div class="sm:col-span-2">
+            <label for="address" class="mb-1.5 block text-sm font-medium text-heading">Dirección *</label>
+            <input id="address" formControlName="address" autocomplete="off" class="input-field" />
+            @if (form.controls.address.touched && form.controls.address.invalid) {
+              <p class="mt-1 text-xs text-red-500">La dirección es obligatoria (máx. 255)</p>
+            }
+          </div>
+
+          <!-- Contacto -->
+          <div>
+            <label for="phone" class="mb-1.5 block text-sm font-medium text-heading">Teléfono</label>
+            <input id="phone" type="tel" formControlName="phone" autocomplete="off" class="input-field" />
+            @if (form.controls.phone.touched && form.controls.phone.invalid) {
+              <p class="mt-1 text-xs text-red-500">Máximo 30 caracteres</p>
+            }
+          </div>
+
+          <div>
+            <label for="email" class="mb-1.5 block text-sm font-medium text-heading">Correo</label>
+            <input id="email" type="email" formControlName="email" autocomplete="off" class="input-field" />
+            @if (form.controls.email.touched && form.controls.email.invalid) {
+              <p class="mt-1 text-xs text-red-500">Ingresa un correo válido (máx. 150)</p>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Pie -->
+      <div class="flex shrink-0 justify-end gap-3 border-t border-border px-6 py-4">
+        <button
+          type="button"
+          (click)="close()"
+          class="cursor-pointer rounded-xl border border-border px-5 py-2.5 text-sm font-semibold text-body transition-colors hover:bg-surface-hover hover:text-heading"
+        >
+          Cancelar
+        </button>
+        <button type="submit" class="btn-primary" [disabled]="saving()">
+          {{ saving() ? 'Guardando...' : 'Guardar proveedor' }}
+        </button>
+      </div>
+    </form>
+  }
+</div>

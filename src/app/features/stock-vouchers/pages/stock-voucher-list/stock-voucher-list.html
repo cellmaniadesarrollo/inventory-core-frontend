@@ -1,0 +1,268 @@
+<section class="space-y-5">
+  <div class="flex flex-wrap items-center justify-between gap-3 pb-1">
+    <div>
+      <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-heading">Movimientos</h2>
+      <p class="text-xs sm:text-sm text-text-subtle mt-0.5">
+        @if (meta(); as m) {
+        Un total de <span class="font-semibold text-heading">{{ m.total }}</span>
+        {{ m.total === 1 ? 'movimiento registrado' : 'movimientos registrados' }}.
+        } @else {
+        Salidas y retornos manuales de stock (vales).
+        }
+      </p>
+    </div>
+    <button type="button" (click)="openNew()"
+      class="btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold shadow-md transition-all hover:shadow-lg active:scale-[0.99]">
+      <svg class="h-4 w-4 stroke-[2.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+      </svg>
+      Nuevo movimiento
+    </button>
+  </div>
+
+  @if (notice()) {
+  <div class="flex items-center gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300 shadow-sm" role="status">
+    <svg class="h-5 w-5 shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+    <span>{{ notice() }}</span>
+  </div>
+  }
+  @if (error()) {
+  <div class="flex items-start justify-between gap-3 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400 shadow-sm" role="alert">
+    <span>{{ error() }}</span>
+    <button type="button" (click)="dismissError()" class="cursor-pointer rounded-lg p-1 transition-colors hover:bg-red-500/20" aria-label="Cerrar aviso">
+      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+  }
+
+  <!-- Búsqueda, filtros y orden -->
+  <div class="rounded-2xl border border-border/70 bg-surface/60 backdrop-blur-md p-3.5 sm:p-4 shadow-sm space-y-3">
+    <div class="flex flex-wrap items-center gap-2.5">
+      <div class="relative w-full sm:w-72 flex-shrink-0">
+        <span class="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-text-subtle">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+          </svg>
+        </span>
+        <input type="text" [formControl]="search" autocomplete="off" maxlength="100"
+          placeholder="Código, nº de orden o empleado" aria-label="Buscar movimientos"
+          class="input-field pl-10 pr-10 text-xs py-2 shadow-none focus:ring-2 focus:ring-primary/20" />
+        @if (searchText()) {
+        <button type="button" (click)="clearSearch()"
+          class="absolute inset-y-0 right-3 flex cursor-pointer items-center text-text-subtle transition hover:text-heading" aria-label="Borrar búsqueda">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        }
+      </div>
+
+      <div class="w-[calc(50%-0.3125rem)] sm:w-36 flex-shrink-0">
+        <select class="input-field text-xs py-2" (change)="setDirection($any($event.target).value)" aria-label="Filtrar por tipo">
+          <option value="">Tipo: Todos</option>
+          <option value="OUT" [selected]="query().direction === 'OUT'">Salidas</option>
+          <option value="IN" [selected]="query().direction === 'IN'">Retornos</option>
+        </select>
+      </div>
+
+      <div class="w-[calc(50%-0.3125rem)] sm:w-52 flex-shrink-0">
+        <select class="input-field text-xs py-2" (change)="setReason($any($event.target).value)" aria-label="Filtrar por motivo">
+          <option value="">Motivo: Todos</option>
+          @for (r of reasonOptions(); track r.id) {
+          <option [value]="r.id" [selected]="r.id === query().reasonId">{{ r.name }}</option>
+          }
+        </select>
+      </div>
+
+      @if (hasActive()) {
+      <button type="button" (click)="clear()"
+        class="inline-flex cursor-pointer items-center gap-1.5 px-3 py-2 text-xs font-semibold text-primary rounded-xl border border-primary/20 hover:bg-primary/10 transition-colors ml-auto">
+        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+        Limpiar filtros
+      </button>
+      }
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+      <div>
+        <label for="f-employee" class="mb-1 block text-[11px] font-medium text-text-subtle uppercase tracking-wider">Empleado</label>
+        <select id="f-employee" class="input-field text-xs py-2" (change)="setEmployee($any($event.target).value)">
+          <option value="">Todos los empleados</option>
+          @for (e of employees(); track e.id) {
+          <option [value]="e.id" [selected]="e.id === query().employeeId">{{ e.name }}</option>
+          }
+        </select>
+      </div>
+
+      <div>
+        <label for="sortBy" class="mb-1 block text-[11px] font-medium text-text-subtle uppercase tracking-wider">Ordenar por</label>
+        <div class="flex gap-1.5">
+          <select id="sortBy" class="input-field text-xs py-2 flex-1" (change)="setSortBy($any($event.target).value)">
+            @for (o of sortOptions; track o.value) {
+            <option [value]="o.value" [selected]="o.value === query().sortBy">{{ o.label }}</option>
+            }
+          </select>
+          <button type="button" (click)="toggleDir()"
+            class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-border bg-surface text-xs font-semibold text-body transition-all hover:bg-surface-hover hover:text-heading shadow-sm"
+            [attr.aria-label]="query().sortDir === 'ASC' ? 'Orden ascendente' : 'Orden descendente'"
+            [attr.title]="query().sortDir === 'ASC' ? 'Ascendente' : 'Descendente'">
+            {{ query().sortDir === 'ASC' ? '↑' : '↓' }}
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <label class="mb-1 block text-[11px] font-medium text-text-subtle uppercase tracking-wider">Rango de fechas</label>
+        <app-date-range-picker [formControl]="dateRangeControl" placeholder="Seleccionar rango"></app-date-range-picker>
+      </div>
+    </div>
+  </div>
+
+  <!-- Listado -->
+  @if (!meta()) {
+  @if (loading()) {
+  <div class="rounded-2xl border border-border/70 bg-surface/30 p-12 text-center text-body">
+    <div class="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent mb-2"></div>
+    <p class="text-sm">Cargando movimientos...</p>
+  </div>
+  }
+  } @else {
+  @if (items().length === 0) {
+  <div class="rounded-2xl border border-border/70 bg-surface/30 px-6 py-14 text-center">
+    <p class="font-semibold text-heading">{{ hasActive() ? 'Sin resultados' : 'Aún no hay movimientos registrados' }}</p>
+    <p class="mt-1 text-xs text-text-subtle max-w-sm mx-auto">
+      {{ hasActive() ? 'No encontramos coincidencias con los filtros aplicados.' : 'Comienza registrando tu primer movimiento.' }}
+    </p>
+    @if (hasActive()) {
+    <button type="button" (click)="clear()" class="mt-4 cursor-pointer text-xs font-semibold text-primary hover:underline">
+      Limpiar filtros de búsqueda
+    </button>
+    }
+  </div>
+  } @else {
+  <div class="flex flex-col gap-2 transition-opacity" [class.opacity-60]="loading()">
+@for (v of items(); track v.id) {
+<article class="rounded-2xl border border-border/70 bg-surface/50 p-4 transition-all hover:bg-surface/80 hover:shadow-md">
+  <div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+    <div class="min-w-0 flex-1 space-y-1.5">
+
+      <!-- Código, tipo, estado de devolución y fecha -->
+      <div class="flex flex-wrap items-center gap-2.5">
+        <span class="font-bold text-heading text-sm font-mono">#{{ v.code }}</span>
+        <span class="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
+          [class]="directionClass(v.direction)">{{ directionLabel(v.direction) }}</span>
+        @if (v.returnStatus) {
+        <span class="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
+          [class]="returnStatusClass(v.returnStatus)">{{ returnStatusLabel(v.returnStatus) }}</span>
+        }
+        <span class="text-xs text-text-subtle">{{ v.createdAt | date:'dd/MM/yyyy HH:mm':'-0500' }}</span>
+      </div>
+
+      <!-- Motivo, empleado, orden -->
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-subtle">
+        <span class="font-semibold text-heading">{{ v.reason.name }}</span>
+        <span>{{ v.employee.name ?? 'Empleado no disponible' }}</span>
+        @if (v.orderNumber) {
+        <span class="rounded-md bg-primary/10 px-2 py-0.5 font-medium text-primary">Orden #{{ v.orderNumber }}</span>
+        @if (v.orderStatus) {
+        <span class="rounded-md bg-surface-hover px-2 py-0.5 text-[10px] font-semibold text-body">{{ v.orderStatus.name }}</span>
+        }
+        @if (v.customerName) {
+        <span class="truncate">{{ v.customerName }}</span>
+        }
+        } @else {
+        <span>Sin orden</span>
+        }
+      </div>
+
+      <!-- Cantidades y extras -->
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-subtle">
+        <span class="rounded-lg border border-teal-500/20 bg-teal-500/10 px-2 py-0.5 font-medium text-teal-800 dark:text-teal-200">
+          {{ v.lineCount }} {{ v.lineCount === 1 ? 'línea' : 'líneas' }} · {{ v.totalQuantity }} {{ v.totalQuantity === 1 ? 'unidad' : 'unidades' }}
+        </span>
+        @if (v.direction === 'OUT') {
+        <span class="tabular-nums">
+          Devueltas <b class="text-heading">{{ v.returnedQuantity ?? 0 }}</b> ·
+          Pendientes <b class="text-heading">{{ v.pendingQuantity ?? 0 }}</b>
+        </span>
+        }
+        @if (v.originVoucher; as ov) {
+        <span>Retorno de la salida <b class="font-mono text-heading">#{{ ov.code }}</b></span>
+        }
+        @if (v.photoCount) {
+        <span>{{ v.photoCount }} {{ v.photoCount === 1 ? 'foto' : 'fotos' }}</span>
+        }
+      </div>
+    </div>
+
+    <!-- Acciones -->
+    <div class="flex shrink-0 items-center gap-2">
+      @if (v.canReturn) {
+      <button type="button" (click)="openReturn(v)" [disabled]="!!returningId()"
+        class="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-3 text-xs font-semibold text-primary shadow-sm transition-all hover:bg-primary/20 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
+        title="Devolver al stock lo que no se usó">
+        @if (returningId() === v.id) {
+        <span class="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></span>
+        } @else {
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+        </svg>
+        }
+        Retornar
+      </button>
+      }
+
+      <button type="button" (click)="openDetail(v.id)"
+        class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-border bg-surface text-heading shadow-sm transition-all hover:border-primary hover:bg-surface-hover hover:text-primary hover:shadow-md active:scale-[0.96]"
+        title="Ver detalle del movimiento" aria-label="Ver detalle del movimiento">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      </button>
+    </div>
+  </div>
+</article>
+}
+  </div>
+  }
+  }
+
+  <!-- Paginación -->
+  @if (meta(); as m) {
+  <div class="rounded-2xl border border-border/70 bg-surface/50 px-4 py-3 text-xs text-body flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+    <p class="text-text-subtle text-center sm:text-left">
+      Mostrando del <span class="font-semibold text-heading">{{ from() }}</span> al
+      <span class="font-semibold text-heading">{{ to() }}</span> de
+      <span class="font-semibold text-heading">{{ m.total }}</span> resultados
+    </p>
+    <div class="flex flex-wrap items-center justify-center gap-3.5">
+      <label class="flex items-center gap-2 text-text-subtle">
+        Filas
+        <select class="input-field w-auto py-1 px-2 text-xs" (change)="setLimit($any($event.target).value)" aria-label="Filas por página">
+          @for (l of limits; track l) {
+          <option [value]="l" [selected]="l === m.limit">{{ l }}</option>
+          }
+        </select>
+      </label>
+      <div class="flex items-center gap-1">
+        <button type="button" (click)="goTo(1)" [disabled]="m.page <= 1"
+          class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-border transition-all hover:bg-surface-hover hover:text-heading disabled:cursor-not-allowed disabled:opacity-30" aria-label="Primera página">«</button>
+        <button type="button" (click)="goTo(m.page - 1)" [disabled]="m.page <= 1"
+          class="cursor-pointer rounded-lg border border-border px-2.5 h-8 text-xs font-medium transition-all hover:bg-surface-hover hover:text-heading disabled:cursor-not-allowed disabled:opacity-30">Ant.</button>
+        <span class="px-1.5 text-text-subtle font-medium">Pág. {{ m.page }} / {{ m.totalPages || 1 }}</span>
+        <button type="button" (click)="goTo(m.page + 1)" [disabled]="m.page >= m.totalPages"
+          class="cursor-pointer rounded-lg border border-border px-2.5 h-8 text-xs font-medium transition-all hover:bg-surface-hover hover:text-heading disabled:cursor-not-allowed disabled:opacity-30">Sig.</button>
+        <button type="button" (click)="goTo(m.totalPages)" [disabled]="m.page >= m.totalPages"
+          class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-border transition-all hover:bg-surface-hover hover:text-heading disabled:cursor-not-allowed disabled:opacity-30" aria-label="Última página">»</button>
+      </div>
+    </div>
+  </div>
+  }
+</section>

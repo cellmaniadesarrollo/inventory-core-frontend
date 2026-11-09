@@ -1,0 +1,171 @@
+<div class="surface-card flex max-h-[92dvh] flex-col overflow-hidden rounded-3xl shadow-2xl ring-1 ring-border/50">
+
+  <!-- Cabecera -->
+  <div
+    class="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-linear-to-br from-primary/15 via-surface to-surface px-6 py-4">
+    <div>
+      <h2 class="text-xl font-bold tracking-tight text-heading">Registrar retorno</h2>
+      <p class="text-xs text-body">Devuelve al stock lo que no se usó del movimiento #{{ voucher.code }}.</p>
+    </div>
+    <button type="button" (click)="cancel()" aria-label="Cerrar"
+      class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-border bg-surface/70 text-body transition-colors hover:bg-surface-hover hover:text-heading">
+      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+
+  <!-- Cuerpo -->
+  <div class="flex-1 space-y-5 overflow-y-auto px-6 py-4">
+
+    @if (loading()) {
+    <div class="py-10 text-center text-body">
+      <div class="mb-2 inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent">
+      </div>
+      <p class="text-sm">Cargando...</p>
+    </div>
+    } @else {
+
+    <!-- Vale de origen (solo lectura) -->
+    <section class="rounded-2xl border border-border/70 bg-surface/30 p-3.5">
+      <p class="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-text-subtle">Vale de origen</p>
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-subtle">
+        <span class="font-mono text-sm font-bold text-heading">#{{ voucher.code }}</span>
+        <span class="font-semibold text-heading">{{ voucher.reason?.name ?? 'Sin motivo' }}</span>
+        <span>{{ voucher.employee?.name ?? 'Empleado no disponible' }}</span>
+        @if (voucher.order; as o) {
+        <span class="rounded-md bg-primary/10 px-2 py-0.5 font-medium text-primary">Orden #{{ o.orderNumber }}</span>
+        } @else {
+        <span>Sin orden</span>
+        }
+      </div>
+    </section>
+
+    <!-- Motivo del retorno -->
+    <section class="rounded-2xl border border-border/70 bg-surface/30 p-3.5">
+      <label for="r-reason"
+        class="mb-1 block text-[11px] font-medium uppercase tracking-wider text-text-subtle">Motivo del retorno</label>
+      <select id="r-reason" class="input-field text-sm" [formControl]="reasonId"
+        [class.border-red-500]="submitted() && !reasonId.value">
+        <option value="">Selecciona...</option>
+        @for (r of inReasons(); track r.id) {
+        <option [value]="r.id">{{ r.name }}</option>
+        }
+      </select>
+    </section>
+
+    <!-- Líneas a devolver -->
+    <section class="space-y-3">
+      <h3 class="text-[11px] font-semibold uppercase tracking-wider text-text-subtle">
+        Repuestos pendientes de devolver
+        <span class="ml-1 rounded-full bg-surface-hover px-1.5 py-0.5 text-[10px] font-semibold text-body">{{ lines.length }}</span>
+      </h3>
+
+      @for (line of lines.controls; track line; let i = $index) {
+      @let lc = line.controls;
+      @let o = lc.origin.value;
+      <article class="space-y-3 rounded-2xl border bg-surface/30 p-3.5 transition-colors"
+        [class]="lc.selected.value ? 'border-primary/60' : 'border-border/70'">
+
+        <!-- Cabecera de la línea -->
+        <div class="flex items-start gap-3">
+          <input type="checkbox" class="mt-1 h-4 w-4 cursor-pointer rounded border-border accent-primary"
+            [id]="'rl-' + i" [checked]="lc.selected.value" (change)="toggleLine(line)"
+            [attr.aria-label]="'Devolver línea ' + o.lineNo" />
+          <label [for]="'rl-' + i" class="min-w-0 flex-1 cursor-pointer">
+            <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span class="font-mono text-sm font-semibold text-heading">{{ o.productSku }}</span>
+              <span class="text-[11px] text-text-subtle">Lote #{{ o.lotCode }}</span>
+              @if (isSerial(line)) {
+              <span class="rounded-full bg-primary-soft px-2 py-0.5 text-[10px] font-medium text-primary">Por serial/IMEI</span>
+              }
+            </div>
+            <p class="mt-0.5 text-[11px] tabular-nums text-text-subtle">
+              Salieron {{ o.quantity }} · Devueltos {{ o.returned ?? 0 }} ·
+              <b class="text-heading">Pendientes {{ o.pending ?? 0 }}</b>
+            </p>
+          </label>
+        </div>
+
+        @if (lc.selected.value) {
+
+        @if (isSerial(line)) {
+        <!-- Equipos pendientes -->
+        <div class="space-y-1.5 border-t border-border/50 pt-2">
+          <p class="text-[11px] text-text-subtle">
+            Marca los equipos que regresan ({{ lc.unitIds.value.length }} seleccionados)
+          </p>
+          @for (u of pendingUnits(line); track u.unitId) {
+          <label class="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1 hover:bg-surface-hover">
+            <input type="checkbox" class="h-4 w-4 rounded border-border accent-primary"
+              [checked]="isUnitPicked(line, u.unitId)" (change)="toggleUnit(line, u.unitId)" />
+            <span class="font-mono text-xs text-heading">{{ u.serials.join(' · ') }}</span>
+          </label>
+          } @empty {
+          <p class="text-[11px] text-text-subtle">No quedan equipos pendientes en esta línea.</p>
+          }
+        </div>
+        } @else {
+        <!-- Cantidad -->
+        <div class="flex items-center gap-2 border-t border-border/50 pt-2">
+          <label [for]="'rq-' + i"
+            class="text-[11px] font-medium uppercase tracking-wider text-text-subtle">Cantidad</label>
+          <input [id]="'rq-' + i" type="number" min="1" [max]="o.pending ?? 1" step="1"
+            class="input-field w-24 py-1.5 text-sm tabular-nums"
+            [value]="lc.quantity.value ?? ''" (input)="setQuantity(line, $any($event.target).value)" />
+          <span class="text-[11px] text-text-subtle">máx. {{ o.pending ?? 0 }}</span>
+        </div>
+        }
+
+        <!-- Fotos -->
+        <div class="space-y-2 border-t border-border/50 pt-2.5">
+          <button type="button" (click)="togglePhotos(line)"
+            class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-body transition-colors hover:border-primary hover:text-primary">
+            {{ lc.photosOpen.value ? 'Ocultar imágenes' : 'Agregar imágenes' }}
+            @if (lc.images.value.length) {
+            <span class="rounded-full bg-primary-soft px-1.5 py-0.5 text-[10px] font-bold text-primary">{{ lc.images.value.length }}</span>
+            }
+          </button>
+          <!-- Se oculta con CSS para no perder las miniaturas al plegar -->
+          <div [class.hidden]="!lc.photosOpen.value">
+            <app-image-upload [files]="lc.images.value" (filesChange)="lc.images.setValue($event)"
+              [max]="5" [maxSizeMb]="5" label="Arrastra las fotos de este retorno aquí" />
+          </div>
+        </div>
+        }
+      </article>
+      }
+    </section>
+
+    <!-- Nota -->
+    <section class="rounded-2xl border border-border/70 bg-surface/30 p-3.5">
+      <label for="r-note" class="mb-1 block text-[11px] font-medium uppercase tracking-wider text-text-subtle">
+        Nota (opcional)
+      </label>
+      <textarea id="r-note" rows="2" maxlength="500" class="input-field text-sm"
+        placeholder="Ej. No se usó, el cliente canceló" [formControl]="note"></textarea>
+    </section>
+
+    }
+  </div>
+
+  <!-- Pie -->
+  <div class="shrink-0 space-y-2 border-t border-border bg-surface px-6 py-3">
+    @if (error()) {
+    <div class="rounded-xl border border-red-300/60 bg-red-500/10 px-4 py-2 text-sm text-red-600 dark:text-red-400"
+      role="alert">
+      {{ error() }}
+    </div>
+    }
+    <div class="flex items-center justify-end gap-2">
+      <button type="button" (click)="cancel()" [disabled]="saving()"
+        class="cursor-pointer rounded-xl border border-border px-5 py-2 text-sm font-semibold text-body transition-colors hover:bg-surface-hover hover:text-heading">
+        Cancelar
+      </button>
+      <button type="button" (click)="submit()" [disabled]="saving() || loading()"
+        class="btn-primary rounded-xl px-5 py-2 text-sm font-semibold disabled:opacity-60">
+        {{ saving() ? 'Guardando...' : 'Registrar retorno' }}
+      </button>
+    </div>
+  </div>
+</div>

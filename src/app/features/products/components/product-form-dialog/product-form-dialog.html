@@ -1,0 +1,308 @@
+<div class="surface-card flex max-h-[90dvh] flex-col shadow-2xl">
+  <!-- Cabecera -->
+  <div class="flex shrink-0 items-center justify-between border-b border-border px-6 py-4">
+    <h2 class="text-lg font-bold text-heading">Nuevo producto</h2>
+    <button
+      type="button"
+      (click)="close()"
+      class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-border text-body transition-colors hover:bg-bg hover:text-heading"
+      aria-label="Cerrar"
+    >
+      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+
+  @if (loadingData()) {
+    <p class="px-6 py-12 text-center text-body">Cargando datos...</p>
+  } @else if (!data()) {
+    <div class="px-6 py-8 text-sm text-red-500">{{ error() }}</div>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="submit()" class="flex min-h-0 flex-1 flex-col">
+      <div
+        #scroller
+        cdkScrollable
+        (scroll)="onModalScroll($event)"
+        class="flex-1 space-y-6 overflow-y-auto px-6 py-5"
+      >
+        @if (error()) {
+          <div class="rounded-xl border border-red-300/60 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400" role="alert">
+            {{ error() }}
+          </div>
+        }
+
+        <!-- Datos del producto (2 columnas) -->
+        <div class="grid gap-4 sm:grid-cols-2">
+          <!-- Fila 1: nombre + tipo -->
+          <div>
+            <label for="productName" class="mb-1.5 block text-sm font-medium text-heading">Nombre del producto *</label>
+            <select id="productName" formControlName="productNameId" class="input-field">
+              <option value="">Selecciona...</option>
+              @for (n of data()!.names; track n.id) {
+                <option [value]="n.id">{{ n.name }}</option>
+              }
+            </select>
+            @if (form.controls.productNameId.touched && form.controls.productNameId.invalid) {
+              <p class="mt-1 text-xs text-red-500">Selecciona un nombre</p>
+            }
+          </div>
+
+          <div>
+            <label for="type" class="mb-1.5 block text-sm font-medium text-heading">Tipo *</label>
+            <select id="type" formControlName="productTypeId" class="input-field">
+              <option value="">Selecciona...</option>
+              @for (t of data()!.types; track t.id) {
+                <option [value]="t.id">{{ t.name }}</option>
+              }
+            </select>
+            @if (form.controls.productTypeId.touched && form.controls.productTypeId.invalid) {
+              <p class="mt-1 text-xs text-red-500">Selecciona un tipo</p>
+            }
+          </div>
+
+          <!-- Fila 2: color + calidad -->
+          <div>
+            <label for="color" class="mb-1.5 block text-sm font-medium text-heading">Color</label>
+            <select id="color" formControlName="colorId" class="input-field">
+              <option value="">Sin color</option>
+              @for (c of data()!.colors; track c.id) {
+                <option [value]="c.id">{{ c.name }}</option>
+              }
+            </select>
+          </div>
+
+          <div>
+            <label for="quality" class="mb-1.5 block text-sm font-medium text-heading">Calidad</label>
+            <select id="quality" formControlName="qualityId" class="input-field">
+              <option value="">Sin calidad</option>
+              @for (q of data()!.qualities; track q.id) {
+                <option [value]="q.id">{{ q.name }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Fila 3: código de barras + seguimiento -->
+          <div>
+            <label for="upc" class="mb-1.5 block text-sm font-medium text-heading">Código de barras (UPC)</label>
+            <input id="upc" formControlName="upc" class="input-field" />
+          </div>
+
+          <div>
+            <label for="tracking" class="mb-1.5 block text-sm font-medium text-heading">Seguimiento</label>
+            <select id="tracking" formControlName="trackingMode" class="input-field">
+              <option value="QUANTITY">Por cantidad</option>
+              <option value="SERIAL">Por serie</option>
+            </select>
+            @if (isDevice()) {
+              <p class="mt-1 text-xs text-text-subtle">Los equipos completos siempre se controlan por serie.</p>
+            }
+          </div>
+
+          <!-- Fila 4: precio + facturación -->
+          <div>
+            <label for="price" class="mb-1.5 block text-sm font-medium text-heading">Precio base</label>
+            <input id="price" type="number" step="0.01" min="0" formControlName="basePrice" class="input-field" />
+          </div>
+
+          <div>
+            <label for="billing" class="mb-1.5 block text-sm font-medium text-heading">Facturación</label>
+            <select id="billing" formControlName="billingMode" class="input-field">
+              <option value="no">No</option>
+              <option value="yes">Sí</option>
+              <option value="optional">Opcional</option>
+            </select>
+          </div>
+<!-- Usos del producto -->
+<div class="sm:col-span-2">
+  <span class="mb-1.5 block text-sm font-medium text-heading">Dónde se usa *</span>
+  <div class="flex flex-wrap gap-x-6 gap-y-2 text-sm text-body">
+    @for (u of data()!.usages; track u.id) {
+      <label class="flex cursor-pointer items-center gap-2">
+        <input
+          type="checkbox"
+          class="h-4 w-4 rounded border-border accent-primary"
+          [checked]="isUsageSelected(u.id)"
+          (change)="toggleUsage(u.id)"
+        />
+        {{ u.name }}
+      </label>
+    }
+  </div>
+  @if (usagesInvalid()) {
+    <p class="mt-1 text-xs text-red-500">Selecciona al menos un uso</p>
+  }
+</div>
+          <!-- Opciones -->
+          <div class="flex flex-wrap gap-x-6 gap-y-2 text-sm text-body sm:col-span-2">
+            <label class="flex cursor-pointer items-center gap-2">
+              <input type="checkbox" formControlName="hasTax" class="h-4 w-4 rounded border-border accent-primary" />
+              Incluye impuesto
+            </label>
+            <label class="flex cursor-pointer items-center gap-2">
+              <input type="checkbox" formControlName="billableInRepairOrders" class="h-4 w-4 rounded border-border accent-primary" />
+              Facturable en órdenes de reparación
+            </label>
+          </div>
+
+          <!-- Descripción -->
+          <div class="sm:col-span-2">
+            <label for="desc" class="mb-1.5 block text-sm font-medium text-heading">Descripción</label>
+            <textarea id="desc" rows="2" formControlName="description" class="input-field"></textarea>
+          </div>
+        </div>
+
+        <!-- Modelos compatibles -->
+        <div class="space-y-2">
+          <div class="flex items-baseline justify-between">
+            <h3 class="text-sm font-medium text-heading">Modelos compatibles</h3>
+            @if (isDevice()) {
+              <span class="text-xs text-text-subtle">Solo un modelo</span>
+            }
+          </div>
+
+          <div class="grid gap-3 sm:grid-cols-[12rem_1fr]">
+            <select class="input-field" (change)="onBrandChange($any($event.target).value)" aria-label="Marca">
+              <option value="">Marca...</option>
+              @for (b of data()!.brands; track b.id) {
+                <option [value]="b.id">{{ b.name }}</option>
+              }
+            </select>
+
+            <!-- Combobox: chips + input en la misma caja -->
+            <div
+              #box
+              cdkOverlayOrigin
+              #origin="cdkOverlayOrigin"
+              (click)="focusSearch()"
+              class="input-field flex min-h-11 cursor-text flex-wrap items-center gap-1.5 px-3 py-1.5 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20"
+              [class.opacity-60]="brandId() === null"
+            >
+              @for (m of selected(); track m.id) {
+                <span
+                  class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1"
+                  [class]="m.color.chip"
+                  [attr.title]="m.brandName"
+                >
+                  {{ m.name }}
+                  <button
+                    type="button"
+                    class="cursor-pointer leading-none opacity-70 hover:opacity-100"
+                    [attr.aria-label]="'Quitar ' + m.name"
+                    (click)="removeModel(m.id); $event.stopPropagation()"
+                  >
+                    ×
+                  </button>
+                </span>
+              }
+
+              <input
+                #searchInput
+                type="text"
+                [formControl]="search"
+                [readonly]="brandId() === null"
+                autocomplete="off"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-controls="model-listbox"
+                [attr.aria-expanded]="open()"
+                [attr.aria-activedescendant]="
+                  activeIndex() >= 0 && models()[activeIndex()] ? 'model-opt-' + models()[activeIndex()].id : null
+                "
+                [placeholder]="
+                  brandId() === null
+                    ? 'Primero elige una marca'
+                    : selected().length
+                      ? 'Añadir otro modelo...'
+                      : 'Buscar modelo...'
+                "
+                class="min-w-32 flex-1 bg-transparent py-1 text-sm outline-hidden placeholder:text-text-subtle/70"
+                (focus)="openPanel()"
+                (input)="openPanel()"
+                (keydown)="onKeydown($event)"
+              />
+
+              @if (loadingModels()) {
+                <svg class="h-4 w-4 animate-spin text-text-subtle" viewBox="0 0 24 24" fill="none">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                  <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                </svg>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Lista flotante (se pinta fuera del modal) -->
+        <ng-template
+          cdkConnectedOverlay
+          [cdkConnectedOverlayOrigin]="origin"
+          [cdkConnectedOverlayOpen]="open()"
+          [cdkConnectedOverlayWidth]="boxWidth()"
+          [cdkConnectedOverlayPositions]="positions"
+          (overlayOutsideClick)="onOutsideClick($event)"
+          (detach)="onDetach()"
+        >
+          <div
+            id="model-listbox"
+            role="listbox"
+            aria-multiselectable="true"
+            class="max-h-60 w-full overflow-y-auto overscroll-contain rounded-xl border border-border bg-surface shadow-xl"
+          >
+            <div class="sticky top-0 flex items-center gap-2 border-b border-border bg-surface px-4 py-2 text-xs font-semibold text-body">
+              <span class="h-2.5 w-2.5 rounded-full" [class]="brandColor().dot"></span>
+              {{ brandName() }}
+            </div>
+
+            @if (loadingModels()) {
+              <p class="px-4 py-3 text-sm text-body">Cargando modelos...</p>
+            }
+
+            @for (m of models(); track m.id; let i = $index) {
+              <div
+                role="option"
+                [id]="'model-opt-' + m.id"
+                [attr.aria-selected]="isSelected(m)"
+                class="flex cursor-pointer items-center justify-between px-4 py-2 text-sm"
+                [class.bg-surface-hover]="i === activeIndex()"
+                (mousedown)="$event.preventDefault()"
+                (click)="toggleModel(m)"
+                (mouseenter)="activeIndex.set(i)"
+              >
+                <span class="text-heading">{{ m.name }}</span>
+                @if (isSelected(m)) {
+                  <svg class="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                  </svg>
+                }
+              </div>
+            } @empty {
+              @if (!loadingModels()) {
+                <p class="px-4 py-3 text-sm text-body">Sin resultados.</p>
+              }
+            }
+          </div>
+        </ng-template>
+
+        <!-- Imágenes (al final) -->
+        <div>
+          <span class="mb-1.5 block text-sm font-medium text-heading">Imágenes (opcional)</span>
+          <app-image-upload [(files)]="images" [max]="5" />
+        </div>
+      </div>
+
+      <!-- Pie -->
+      <div class="flex shrink-0 justify-end gap-3 border-t border-border px-6 py-4">
+        <button
+          type="button"
+          (click)="close()"
+          class="cursor-pointer rounded-xl border border-border px-5 py-2.5 text-sm font-semibold text-body transition-colors hover:bg-surface-hover hover:text-heading"
+        >
+          Cancelar
+        </button>
+        <button type="submit" class="btn-primary" [disabled]="saving()">
+          {{ saving() ? 'Guardando...' : 'Guardar producto' }}
+        </button>
+      </div>
+    </form>
+  }
+</div>

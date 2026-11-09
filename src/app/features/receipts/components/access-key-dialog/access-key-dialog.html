@@ -1,0 +1,266 @@
+<div class="surface-card flex max-h-[92dvh] flex-col overflow-hidden rounded-3xl shadow-2xl ring-1 ring-border/50">
+
+  <!-- Cabecera -->
+  <div class="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-gradient-to-br from-primary/15 via-surface to-surface px-6 py-4">
+    <div>
+      <h2 class="text-xl font-bold tracking-tight text-heading">Importar por clave de acceso</h2>
+      <p class="text-xs text-body">Consulta la factura electrónica con su clave de 49 dígitos.</p>
+    </div>
+    <button type="button" (click)="cancel()" aria-label="Cerrar"
+      class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-border bg-surface/70 text-body transition-colors hover:bg-surface-hover hover:text-heading">
+      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+
+  <!-- Cuerpo -->
+  <div class="flex-1 space-y-4 overflow-y-auto px-6 py-4">
+
+    <div>
+      <label for="ak-key" class="mb-1 block text-[11px] font-medium uppercase tracking-wider text-text-subtle">Clave de acceso</label>
+      <div class="flex gap-2">
+        <input id="ak-key" class="input-field flex-1 font-mono text-sm" inputmode="numeric"
+          placeholder="Pega aquí los 49 dígitos o el texto del XML" [formControl]="keyControl"
+          (input)="onInput()" (paste)="onPaste($event)" (keydown.enter)="search()" />
+        <button type="button" (click)="search()" [disabled]="loading()"
+          class="btn-primary rounded-xl px-5 py-2 text-sm font-semibold disabled:opacity-60">
+          {{ loading() ? 'Buscando...' : 'Buscar' }}
+        </button>
+      </div>
+      <p class="mt-1 text-[11px] text-text-subtle tabular-nums">
+        {{ digits(keyControl.value).length }}/49 dígitos
+      </p>
+
+      <!-- Arrastrar o elegir el XML -->
+      <label
+        class="mt-2 flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed px-4 py-4 text-center text-xs text-body transition-colors"
+        [class.border-primary]="dragging()" [class.bg-primary-soft]="dragging()"
+        [class.border-border]="!dragging()"
+        (dragover)="onDragOver($event)" (dragleave)="onDragLeave()" (drop)="onDrop($event)">
+        <svg class="h-6 w-6 text-text-subtle" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0l-4 4m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
+        </svg>
+        <span><b class="text-heading">Arrastra el XML aquí</b> o haz clic para elegirlo</span>
+        <span class="text-[11px] text-text-subtle">También puedes pegar el contenido del XML en el campo de arriba</span>
+        <input type="file" class="hidden" accept=".xml,.txt,text/xml,application/xml,text/plain"
+          (change)="onFilePicked($event)" />
+      </label>
+    </div>
+
+    @if (loading()) {
+    <div class="flex items-center gap-3 rounded-xl border border-border/70 bg-surface/30 px-4 py-3 text-sm text-body" role="status">
+      <svg class="h-4 w-4 animate-spin text-primary" viewBox="0 0 24 24" fill="none">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+      </svg>
+      Consultando el SRI... puede tardar hasta 15 segundos.
+    </div>
+    }
+
+    @if (error()) {
+    <div class="rounded-xl border border-red-300/60 bg-red-500/10 px-4 py-2 text-sm text-red-600 dark:text-red-400" role="alert">
+      {{ error() }}
+    </div>
+    }
+
+    @if (preview(); as p) {
+
+    <!-- Ya existe un ingreso -->
+    @if (!p.canImport && p.existingReceipt; as r) {
+    <div class="rounded-xl border border-amber-300/60 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300" role="alert">
+      Ya existe un ingreso con esta clave: <b>#{{ r.code }}</b> · {{ r.issueDate }} · {{ r.status }}
+    </div>
+    }
+
+    <!-- Avisos no bloqueantes -->
+    @for (w of p.warnings; track w) {
+    <div class="rounded-xl border border-amber-300/60 bg-amber-500/10 px-4 py-2 text-xs text-amber-700 dark:text-amber-300">
+      {{ w }}
+    </div>
+    }
+
+    <!-- Estado del SRI -->
+    @if (p.sri.available) {
+      @if (p.sri.state === 'AUTHORIZED') {
+      <div class="rounded-xl bg-emerald-500/10 px-4 py-2 text-xs text-emerald-700 dark:text-emerald-300">
+        Factura autorizada por el SRI · N° {{ p.sri.authorizationNumber }}
+      </div>
+      } @else if (p.sri.state === 'NOT_AUTHORIZED') {
+      <div class="rounded-xl border border-red-300/60 bg-red-500/10 px-4 py-2 text-xs text-red-600 dark:text-red-400">
+        El SRI indica que esta factura <b>no está autorizada</b>.
+      </div>
+      } @else if (p.sri.state === 'NOT_FOUND') {
+      <div class="rounded-xl border border-amber-300/60 bg-amber-500/10 px-4 py-2 text-xs text-amber-700 dark:text-amber-300">
+        El SRI no encontró un comprobante con esta clave.
+      </div>
+      }
+    } @else if (p.canImport) {
+    <div class="rounded-xl border border-amber-300/60 bg-amber-500/10 px-4 py-2 text-xs text-amber-700 dark:text-amber-300">
+      {{ p.sri.message ?? 'No se pudo consultar el SRI.' }} Puedes continuar con el ingreso manual.
+    </div>
+    }
+
+    <!-- Datos del comprobante -->
+    <section class="space-y-3 rounded-2xl border border-border/70 bg-surface/30 p-3.5">
+      <h3 class="text-[11px] font-semibold uppercase tracking-wider text-text-subtle">Comprobante</h3>
+      <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+        <div>
+          <dt class="text-[10px] uppercase tracking-wider text-text-subtle">Tipo</dt>
+          <dd class="font-semibold text-heading">{{ p.key.documentType }}</dd>
+        </div>
+        <div>
+          <dt class="text-[10px] uppercase tracking-wider text-text-subtle">N° de documento</dt>
+          <dd class="font-mono font-semibold text-heading">{{ p.key.documentNumber }}</dd>
+        </div>
+        <div>
+          <dt class="text-[10px] uppercase tracking-wider text-text-subtle">Fecha de emisión</dt>
+          <dd class="font-semibold text-heading">{{ p.key.issueDate }}</dd>
+        </div>
+        <div>
+          <dt class="text-[10px] uppercase tracking-wider text-text-subtle">Ambiente</dt>
+          <dd class="font-semibold text-heading">{{ p.key.environment }}</dd>
+        </div>
+        <div class="col-span-2">
+          <dt class="text-[10px] uppercase tracking-wider text-text-subtle">RUC emisor</dt>
+          <dd class="font-mono font-semibold text-heading">{{ p.key.issuerRuc }}</dd>
+        </div>
+      </dl>
+    </section>
+
+    <!-- Líneas de la factura -->
+<section class="space-y-3 rounded-2xl border border-border/70 bg-surface/30 p-3.5">
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <h3 class="text-[11px] font-semibold uppercase tracking-wider text-text-subtle">Líneas de la factura</h3>
+    @if (p.lines.length) {
+    <p class="text-xs text-body">
+      <b class="text-heading">{{ summary().mapped }}</b> relacionadas ·
+      <b class="text-heading">{{ summary().nonInventory }}</b> sin inventario ·
+      <b class="text-heading">{{ summary().unmapped }}</b> por asignar
+    </p>
+    }
+  </div>
+
+  @if (p.lines.length) {
+  <div class="max-h-80 space-y-2 overflow-y-auto pr-1">
+    @for (l of p.lines; track l.lineNo) {
+    <article class="space-y-1.5 rounded-xl border border-border/60 bg-surface/50 p-2.5">
+
+      <!-- Lo que dice la factura -->
+      <div class="flex items-start gap-2">
+        <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[10px] font-bold text-primary">{{ l.lineNo }}</span>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-semibold leading-snug text-heading">{{ l.description }}</p>
+          <p class="text-[11px] text-text-subtle">
+            @if (l.supplierCode) { Cód. <span class="font-mono">{{ l.supplierCode }}</span> · }
+            @if (l.auxiliaryCode) { Aux. <span class="font-mono">{{ l.auxiliaryCode }}</span> · }
+            {{ l.quantity }} × {{ l.unitPrice | number: '1.2-4' }}
+            @if (l.discount > 0) { · Desc. {{ l.discount | number: '1.2-2' }} }
+            @if (l.tax) { · IVA {{ l.tax.rate }}% }
+          </p>
+        </div>
+        <div class="shrink-0 text-right">
+          <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold" [class]="statusClass(l)">{{ statusLabel(l) }}</span>
+          <span class="mt-1 block text-xs font-bold tabular-nums text-heading">{{ l.subtotal | number: '1.2-2' }}</span>
+        </div>
+      </div>
+
+      <!-- Con qué está relacionado -->
+      @if (l.match.product; as prod) {
+      <div class="ml-7 rounded-lg border border-emerald-500/25 bg-emerald-500/5 px-2.5 py-1.5 text-xs">
+        <p class="text-heading">
+          → <b>{{ prod.name }}</b>
+          <span class="font-mono text-[11px] text-text-subtle">{{ prod.sku }}</span>
+          @if (prod.quality) { <span class="text-text-subtle">· {{ prod.quality }}</span> }
+          @if (prod.trackingMode === 'SERIAL') {
+          <span class="ml-1 rounded-full bg-primary-soft px-1.5 py-0.5 text-[10px] font-medium text-primary">Requiere IMEI</span>
+          }
+        </p>
+
+        @if (prod.models.length) {
+        <div class="mt-1 flex flex-wrap gap-1">
+          @for (m of prod.models.slice(0, 3); track m.id) {
+          <span class="rounded-full bg-teal-500/15 px-2 py-0.5 text-[10px] font-medium text-teal-700 dark:text-teal-300">{{ m.brand }} · {{ m.name }}</span>
+          }
+          @if (prod.models.length > 3) {
+          <span class="rounded-full bg-teal-500/15 px-2 py-0.5 text-[10px] font-medium text-teal-700 dark:text-teal-300">+{{ prod.models.length - 3 }}</span>
+          }
+        </div>
+        }
+
+        @if (l.match.suggestion; as sg) {
+        <p class="mt-1 text-[11px] text-text-subtle">
+          @if (hasFactor(l)) { Factor ×{{ +l.match.mapping!.unitFactor }} · }
+          Ingresará
+          @if (sg.quantity !== null) { <b class="text-heading">{{ sg.quantity }} uds</b> }
+          @else { <b class="text-amber-700 dark:text-amber-300">cantidad por definir</b> }
+          a <b class="tabular-nums text-heading">{{ sg.unitCost | number: '1.2-4' }}</b> c/u
+        </p>
+        }
+      </div>
+} @else if (l.match.status === 'UNMAPPED') {
+<p class="ml-7 text-[11px] text-amber-700 dark:text-amber-300">
+  {{ reasonLabel(l.match.reason) }}. Podrás relacionarlo con un producto o marcarlo como gasto (sin inventario) en el formulario.
+</p>
+} @else if (l.match.status === 'NON_INVENTORY') {
+<p class="ml-7 text-[11px] text-text-subtle">
+  Este código se registró antes como gasto (no mueve stock). Podrás relacionarlo con un producto en el formulario si es inventario.
+</p>
+}
+    </article>
+    }
+  </div>
+
+  @if (p.documentTotals; as t) {
+  <div class="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 border-t border-border/50 pt-2 text-xs text-body tabular-nums">
+    <span>Subtotal <b class="text-heading">{{ t.subtotal }}</b></span>
+    <span>Descuento <b class="text-heading">{{ t.discount }}</b></span>
+    <span>Total según factura <b class="text-sm text-heading">{{ t.total }}</b></span>
+  </div>
+  }
+  } @else {
+  <p class="text-sm text-text-subtle">No hay líneas disponibles. Puedes cargar los productos manualmente.</p>
+  }
+</section>
+
+    <!-- Proveedor -->
+    <section class="space-y-2 rounded-2xl border border-border/70 bg-surface/30 p-3.5">
+      <h3 class="text-[11px] font-semibold uppercase tracking-wider text-text-subtle">Proveedor</h3>
+      @if (p.supplier; as s) {
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-sm font-semibold text-heading">{{ s.businessName }}</span>
+        <span class="font-mono text-[11px] text-text-subtle">#{{ s.code }}</span>
+        @if (s.tradeName) {
+        <span class="text-xs text-body">· {{ s.tradeName }}</span>
+        }
+        @if (!s.status) {
+        <span class="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">Inactivo</span>
+        }
+      </div>
+      } @else if (p.supplierDraft) {
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <p class="text-sm text-body">
+          El RUC <b class="font-mono">{{ p.key.issuerRuc }}</b> no está registrado como proveedor.
+        </p>
+        <button type="button" (click)="createSupplier()"
+          class="cursor-pointer rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-body transition-colors hover:border-primary hover:text-primary">
+          Crear proveedor
+        </button>
+      </div>
+      }
+    </section>
+    }
+  </div>
+
+  <!-- Pie -->
+  <div class="flex shrink-0 items-center justify-end gap-2 border-t border-border bg-surface px-6 py-3">
+    <button type="button" (click)="cancel()"
+      class="cursor-pointer rounded-xl border border-border px-5 py-2 text-sm font-semibold text-body transition-colors hover:bg-surface-hover hover:text-heading">
+      Cancelar
+    </button>
+    <button type="button" (click)="accept()" [disabled]="!canAccept()"
+      class="btn-primary rounded-xl px-5 py-2 text-sm font-semibold disabled:opacity-60">
+      Aceptar
+    </button>
+  </div>
+</div>

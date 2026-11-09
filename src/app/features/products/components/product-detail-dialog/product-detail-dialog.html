@@ -1,0 +1,701 @@
+<div class="surface-card flex max-h-[90dvh] flex-col overflow-hidden rounded-3xl shadow-2xl ring-1 ring-border/50">
+
+    <!-- ===== Cabecera ===== -->
+    <div class="relative shrink-0 overflow-hidden border-b border-border bg-gradient-to-br from-primary/15 via-surface to-surface">
+        <!-- Decoración -->
+        <div class="pointer-events-none absolute -right-10 -top-12 h-44 w-44 rounded-full bg-primary/15 blur-3xl"></div>
+        <div class="pointer-events-none absolute -bottom-16 left-1/3 h-40 w-40 rounded-full bg-teal-500/10 blur-3xl"></div>
+
+        <div class="relative flex items-start gap-4 px-6 pb-4 pt-5">
+            @if (detail(); as d) {
+            <!-- Portada -->
+            <div class="h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-surface shadow-md ring-2 ring-primary/30 sm:h-20 sm:w-20">
+                @if (cover(); as c) {
+                <img [src]="c.url" [alt]="c.fileName" class="h-full w-full object-cover" />
+                } @else {
+                <div class="flex h-full w-full items-center justify-center bg-primary-soft text-primary">
+                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons.cube" />
+                    </svg>
+                </div>
+                }
+            </div>
+
+            <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                    <h2 class="truncate text-xl font-bold tracking-tight text-heading">{{ d.name.name }}</h2>
+                    <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+                        [class]="d.status ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' : 'bg-red-500/15 text-red-600 dark:text-red-400'">
+                        <span class="h-1.5 w-1.5 rounded-full" [class]="d.status ? 'bg-emerald-500' : 'bg-red-500'"></span>
+                        {{ d.status ? 'Activo' : 'Inactivo' }}
+                    </span>
+                </div>
+                <p class="mt-1 font-mono text-xs text-body">{{ d.sku }} · Código {{ d.code }}</p>
+
+                <!-- Metadatos -->
+                <div class="mt-3 flex flex-wrap gap-1.5">
+                    @for (r of [
+                    { l: 'Tipo', v: d.type.name },
+                    { l: 'Clase', v: d.kind },
+                    { l: 'Seguimiento', v: d.trackingMode === 'SERIAL' ? 'Por serie' : 'Por cantidad' },
+                    { l: 'Creado', v: (d.createdAt | date: 'dd/MM/yyyy') }
+                    ]; track r.l) {
+                    <span class="inline-flex items-center gap-1.5 rounded-lg bg-surface/70 px-2.5 py-1 text-[11px] ring-1 ring-border/60 backdrop-blur">
+                        <span class="text-text-subtle">{{ r.l }}</span>
+                        <span class="font-semibold text-heading">{{ r.v }}</span>
+                    </span>
+                    }
+                </div>
+            </div>
+            } @else {
+            <div class="flex-1">
+                <h2 class="text-xl font-bold text-heading">Producto</h2>
+            </div>
+            }
+
+            <button type="button" (click)="close()" aria-label="Cerrar"
+                class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-border bg-surface/70 text-body backdrop-blur transition-colors hover:bg-surface-hover hover:text-heading">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    @if (loading()) {
+    <!-- Esqueleto de carga -->
+    <div class="animate-pulse space-y-4 px-6 py-6">
+        <div class="h-24 rounded-2xl bg-surface-hover"></div>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div class="h-36 rounded-2xl bg-surface-hover"></div>
+            <div class="h-36 rounded-2xl bg-surface-hover"></div>
+        </div>
+    </div>
+    } @else if (!detail()) {
+    <div class="px-6 py-8 text-sm text-red-500">{{ error() }}</div>
+    } @else {
+    @let d = detail()!;
+
+    <!-- ===== Pestañas ===== -->
+    <div class="shrink-0 px-6 pt-3">
+        <div class="inline-flex gap-1 rounded-xl bg-surface-hover/70 p-1">
+            @for (t of tabs; track t.id) {
+            <button type="button" (click)="tab.set(t.id)"
+                class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-semibold transition-all"
+                [class]="tab() === t.id ? 'bg-surface text-primary shadow-sm ring-1 ring-border/60' : 'text-body hover:text-heading'">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons[t.icon]" />
+                </svg>
+                {{ t.label }}
+            </button>
+            }
+        </div>
+    </div>
+
+    <div class="flex-1 space-y-3 overflow-y-auto px-6 py-4">
+        @if (notice()) {
+        <div class="flex items-center gap-2 rounded-xl border border-emerald-300/60 bg-emerald-500/10 px-4 py-2.5 text-sm text-emerald-700 shadow-sm dark:text-emerald-400"
+            role="status">
+            <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
+            {{ notice() }}
+        </div>
+        }
+        @if (error()) {
+        <div class="rounded-xl border border-red-300/60 bg-red-500/10 px-4 py-2.5 text-sm text-red-600 shadow-sm dark:text-red-400"
+            role="alert">{{ error() }}</div>
+        }
+        @if (inactive()) {
+        <div class="rounded-xl border border-amber-300/60 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-700 shadow-sm dark:text-amber-300">
+            Producto inactivo: solo lectura.
+        </div>
+        }
+
+        @if (tab() === 'data') {
+
+        <!-- ===== Galería (también es zona de arrastre) ===== -->
+        <section class="relative rounded-xl border border-border/70 bg-surface/30 p-3 transition-colors"
+            [class.border-primary]="dragging()" [class.bg-primary-soft]="dragging()"
+            (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
+
+            <div class="mb-2 flex items-center gap-2">
+                <svg class="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons.photo" />
+                </svg>
+                <h3 class="text-[11px] font-semibold uppercase tracking-wider text-text-subtle">Galería</h3>
+                <span class="rounded-full bg-surface-hover px-1.5 py-0.5 text-[10px] font-semibold text-body">{{ d.images.length }}</span>
+
+                @if (!inactive()) {
+                <div class="ml-auto flex items-center gap-1.5">
+                    <label class="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-xs font-semibold text-body transition-colors hover:border-primary hover:bg-primary-soft hover:text-primary"
+                        [class.pointer-events-none]="uploadingImages()" [class.opacity-60]="uploadingImages()">
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons.plus" />
+                        </svg>
+                        Agregar
+                        <input type="file" accept="image/*" multiple class="hidden" (change)="onImagesSelected($event)" />
+                    </label>
+                    <button type="button" (click)="openCamera()" [disabled]="uploadingImages()"
+                        class="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-xs font-semibold text-body transition-colors hover:border-primary hover:bg-primary-soft hover:text-primary disabled:opacity-60">
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+                        </svg>
+                        Cámara
+                    </button>
+                </div>
+                }
+            </div>
+
+            <div class="flex gap-2.5 overflow-x-auto p-1">
+                @for (img of d.images; track img.id) {
+                <div class="group relative h-16 w-16 shrink-0">
+                    <img [src]="img.url" [alt]="img.fileName" loading="lazy" (click)="openImage($index)"
+                        class="h-full w-full cursor-zoom-in rounded-lg border object-cover shadow-sm"
+                        [class]="img.isPrimary ? 'border-primary ring-2 ring-primary/40' : 'border-border'"
+                        [class.opacity-50]="imageBusyId() === img.id" />
+
+                    @if (img.isPrimary) {
+                    <span class="absolute -left-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-white shadow" title="Principal">
+                        <svg class="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 24 24"><path [attr.d]="icons.star" /></svg>
+                    </span>
+                    }
+
+                    @if (!inactive()) {
+                    @if (confirmingImageDeleteId() === img.id) {
+                    <div class="absolute inset-0 flex flex-col items-center justify-center gap-0.5 rounded-lg bg-black/75 p-0.5">
+                        <span class="text-[9px] font-medium text-white">¿Eliminar?</span>
+                        <div class="flex gap-1">
+                            <button type="button" (click)="removeImage(img.id)" [disabled]="imageBusyId() === img.id"
+                                class="cursor-pointer rounded bg-red-600 px-1.5 text-[10px] font-semibold text-white">Sí</button>
+                            <button type="button" (click)="confirmingImageDeleteId.set(null)"
+                                class="cursor-pointer rounded bg-white/90 px-1.5 text-[10px] font-semibold text-gray-800">No</button>
+                        </div>
+                    </div>
+                    } @else {
+                    <div class="absolute inset-x-0.5 bottom-0.5 flex justify-center gap-0.5 rounded bg-black/60 p-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+                        @if (!img.isPrimary) {
+                        <button type="button" (click)="makePrimary(img.id)" [disabled]="!!imageBusyId()"
+                            aria-label="Marcar como principal" title="Marcar como principal"
+                            class="cursor-pointer rounded p-0.5 text-white hover:bg-white/20 disabled:opacity-50">
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons.star" />
+                            </svg>
+                        </button>
+                        }
+                        <button type="button" (click)="confirmingImageDeleteId.set(img.id)" [disabled]="!!imageBusyId()"
+                            aria-label="Eliminar imagen" title="Eliminar imagen"
+                            class="cursor-pointer rounded p-0.5 text-white hover:bg-red-500/60 disabled:opacity-50">
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons.trash" />
+                            </svg>
+                        </button>
+                    </div>
+                    }
+                    }
+                </div>
+                } @empty {
+                <p class="py-1 text-xs text-text-subtle">
+                    Sin imágenes{{ !inactive() ? ' — arrastra archivos aquí, usa Agregar o la cámara' : '' }}
+                </p>
+                }
+            </div>
+
+            <!-- Pendientes de confirmar -->
+            @if (pending().length) {
+            <div class="mt-2 rounded-lg border border-primary/30 bg-primary-soft/40 p-2">
+                <div class="flex gap-2 overflow-x-auto p-1">
+                    @for (p of pending(); track p.url; let i = $index) {
+                    <div class="relative h-14 w-14 shrink-0">
+                        <img [src]="p.url" alt="" class="h-full w-full rounded-md border border-border object-cover" />
+                        <button type="button" (click)="removePending(i)" [disabled]="uploadingImages()" aria-label="Quitar"
+                            class="absolute -right-1 -top-1 flex h-4 w-4 cursor-pointer items-center justify-center rounded-full bg-black/70 text-white hover:bg-red-600">
+                            <svg class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                    }
+                </div>
+
+                <div class="mt-2 flex flex-wrap items-center gap-2">
+                    @if (!confirmingUpload()) {
+                    <button type="button" (click)="confirmingUpload.set(true)"
+                        class="btn-primary px-3 py-1 text-xs font-semibold">
+                        Guardar {{ pending().length }} {{ pending().length === 1 ? 'imagen' : 'imágenes' }}
+                    </button>
+                    } @else {
+                    <span class="text-xs text-body">¿Confirmar?</span>
+                    <button type="button" (click)="confirmUpload()" [disabled]="uploadingImages()"
+                        class="btn-primary px-3 py-1 text-xs font-semibold">
+                        {{ uploadingImages() ? 'Subiendo...' : 'Sí' }}
+                    </button>
+                    }
+                    <button type="button" (click)="cancelPending()" [disabled]="uploadingImages()"
+                        class="cursor-pointer rounded-lg border border-border px-3 py-1 text-xs font-semibold text-body hover:bg-surface-hover">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+            }
+
+            @if (dragging()) {
+            <div class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl border-2 border-dashed border-primary bg-primary-soft/80 text-sm font-semibold text-primary">
+                Suelta las imágenes para agregarlas
+            </div>
+            }
+        </section>
+
+        <!-- ===== Secciones de datos (compactas: etiqueta | valor) ===== -->
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            @for (s of sections; track s.title) {
+            <section class="rounded-xl border border-border/70 bg-surface/30 px-3 py-2" [class.sm:col-span-2]="s.wide">
+                <div class="mb-1 flex items-center gap-1.5">
+                    <svg class="h-3.5 w-3.5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons[s.icon]" />
+                    </svg>
+                    <h3 class="text-[11px] font-semibold uppercase tracking-wider text-text-subtle">{{ s.title }}</h3>
+                </div>
+
+                <div class="divide-y divide-border/40">
+                    @for (f of s.fields; track f.key) {
+                    <div class="group/field py-1.5">
+                        @if (editing() !== f.key) {
+                        <div class="flex items-start gap-2" [class.flex-col]="f.full" [class.gap-0.5]="f.full">
+                            <span class="shrink-0 pt-px text-[11px] text-text-subtle" [class.w-32]="!f.full">{{ f.label }}</span>
+
+                            <div class="min-w-0 flex-1 text-sm font-semibold text-heading">
+                                @switch (f.key) {
+                                @case ('usages') {
+                                <div class="flex flex-wrap gap-1">
+                                    @for (u of d.usages; track u.id) {
+                                    <span class="rounded-full bg-primary-soft px-2 py-0.5 text-[11px] font-medium text-primary">{{ u.name }}</span>
+                                    } @empty {
+                                    <span class="text-text-subtle">—</span>
+                                    }
+                                </div>
+                                }
+                                @case ('basePrice') {
+                                <span class="tabular-nums">{{ display(f.key) }}</span>
+                                }
+                                @case ('description') {
+                                <p class="break-words font-medium text-body">{{ display(f.key) }}</p>
+                                }
+                                @default {
+                                <span class="break-words">{{ display(f.key) }}</span>
+                                }
+                                }
+                            </div>
+
+                            @if (!inactive()) {
+                            <button type="button" (click)="startEdit(f.key)" [attr.aria-label]="'Editar ' + f.label"
+                                class="shrink-0 cursor-pointer rounded p-0.5 text-text-subtle transition-all hover:bg-primary-soft hover:text-primary">
+                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons.pencil" />
+                                </svg>
+                            </button>
+                            }
+                        </div>
+                        } @else {
+                        <!-- Edición en línea -->
+                        <div class="space-y-2 rounded-lg bg-primary-soft/30 p-2 ring-1 ring-primary/40">
+                            <span class="text-[11px] font-medium text-text-subtle">{{ f.label }}</span>
+
+                            @switch (f.kind) {
+                            @case ('select') {
+                            <select class="input-field" [value]="draft()" (change)="setDraft($any($event.target).value)">
+                                @if (f.key !== 'name') {
+                                <option value="">Sin {{ f.key === 'color' ? 'color' : 'calidad' }}</option>
+                                }
+                                @for (o of f.key === 'name' ? options()?.names : f.key === 'color' ? options()?.colors :
+                                options()?.qualities; track o.id) {
+                                <option [value]="o.id" [selected]="o.id === draft()">{{ o.name }}</option>
+                                }
+                            </select>
+                            }
+                            @case ('text') {
+                            <input class="input-field" [value]="draft()" (input)="setDraft($any($event.target).value)" />
+                            }
+                            @case ('textarea') {
+                            <textarea rows="3" class="input-field" [value]="draft()"
+                                (input)="setDraft($any($event.target).value)"></textarea>
+                            }
+                            @case ('number') {
+                            <input type="number" min="0" [step]="f.key === 'basePrice' ? '0.01' : '1'" class="input-field"
+                                [value]="draft()" (input)="setDraft($any($event.target).value)" />
+                            }
+                            @case ('bool') {
+                            <label class="flex cursor-pointer items-center gap-2 text-sm text-body">
+                                <input type="checkbox" class="h-4 w-4 rounded border-border accent-primary"
+                                    [checked]="draft()" (change)="setDraft($any($event.target).checked)" />
+                                {{ draft() ? 'Sí' : 'No' }}
+                            </label>
+                            }
+                            @case ('billing') {
+                            <select class="input-field" (change)="setDraft($any($event.target).value)">
+                                @for (o of [['no', 'No'], ['yes', 'Sí'], ['optional', 'Opcional']]; track o[0]) {
+                                <option [value]="o[0]" [selected]="o[0] === draft()">{{ o[1] }}</option>
+                                }
+                            </select>
+                            }
+                            @case ('usages') {
+                            <div class="flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-body">
+                                @for (u of options()?.usages; track u.id) {
+                                <label class="flex cursor-pointer items-center gap-2">
+                                    <input type="checkbox" class="h-4 w-4 rounded border-border accent-primary"
+                                        [checked]="draft().includes(u.id)" (change)="toggleUsage(u.id)" />
+                                    {{ u.name }}
+                                </label>
+                                }
+                            </div>
+                            }
+                            }
+
+                            @if (fieldError()) {
+                            <p class="text-xs text-red-500">{{ fieldError() }}</p>
+                            }
+
+                            <div class="flex flex-wrap items-center gap-2">
+                                @if (!confirming()) {
+                                <button type="button" (click)="askConfirm()"
+                                    class="btn-primary px-3 py-1 text-xs font-semibold">Guardar</button>
+                                } @else {
+                                <span class="text-xs text-body">¿Confirmar?</span>
+                                <button type="button" (click)="confirmSave()" [disabled]="saving()"
+                                    class="btn-primary px-3 py-1 text-xs font-semibold">
+                                    {{ saving() ? 'Guardando...' : 'Sí' }}
+                                </button>
+                                }
+                                <button type="button" (click)="cancelEdit()" [disabled]="saving()"
+                                    class="cursor-pointer rounded-lg border border-border px-3 py-1 text-xs font-semibold text-body hover:bg-surface-hover">
+                                    Cancelar
+                                </button>
+                            </div>
+                        </div>
+                        }
+                    </div>
+                    }
+                </div>
+            </section>
+            }
+        </div>
+
+        <!-- ===== Modelos compatibles ===== -->
+        <section class="rounded-xl border border-border/70 bg-surface/30 px-3 py-2">
+            <div class="mb-1.5 flex items-center gap-1.5">
+                <svg class="h-3.5 w-3.5 text-teal-600 dark:text-teal-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons.cube" />
+                </svg>
+                <h3 class="text-[11px] font-semibold uppercase tracking-wider text-text-subtle">Modelos compatibles</h3>
+                <span class="rounded-full bg-surface-hover px-1.5 py-0.5 text-[10px] font-semibold text-body">{{ d.models.length }}</span>
+
+                @if (editing() !== 'models' && !inactive()) {
+                <button type="button" (click)="startEdit('models')" aria-label="Editar modelos compatibles"
+                    class="ml-auto cursor-pointer rounded p-0.5 text-text-subtle transition-colors hover:bg-primary-soft hover:text-primary focus:outline-none">
+                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons.pencil" />
+                    </svg>
+                </button>
+                }
+            </div>
+
+            @if (editing() !== 'models') {
+            <div class="flex max-h-24 flex-wrap gap-1 overflow-y-auto">
+                @for (m of d.models; track m.id) {
+                <span class="rounded-full bg-teal-500/15 px-2 py-0.5 text-[11px] font-medium text-teal-700 ring-1 ring-teal-500/20 dark:text-teal-300">
+                    {{ m.brandName }} · {{ m.name }}
+                </span>
+                } @empty {
+                <span class="text-xs text-text-subtle">— Sin modelos asignados —</span>
+                }
+            </div>
+            } @else {
+            <div class="space-y-3">
+                @if (options(); as o) {
+                <app-model-picker [brands]="o.brands" [single]="d.kind === 'DEVICE'" [selected]="draft()"
+                    (selectedChange)="setDraft($event)" />
+                } @else {
+                <p class="text-sm text-body">Cargando marcas...</p>
+                }
+
+                @if (fieldError()) {
+                <p class="text-xs text-red-500">{{ fieldError() }}</p>
+                }
+
+                <div class="flex flex-wrap items-center gap-2 pt-1">
+                    @if (!confirming()) {
+                    <button type="button" (click)="askConfirm()"
+                        class="btn-primary px-3 py-1 text-xs font-semibold">Guardar</button>
+                    } @else {
+                    <span class="text-xs text-body">¿Confirmar cambios en modelos?</span>
+                    <button type="button" (click)="confirmSave()" [disabled]="saving()"
+                        class="btn-primary px-3 py-1 text-xs font-semibold">
+                        {{ saving() ? 'Guardando...' : 'Sí' }}
+                    </button>
+                    }
+                    <button type="button" (click)="cancelEdit()" [disabled]="saving()"
+                        class="cursor-pointer rounded-lg border border-border px-3 py-1 text-xs font-semibold text-body hover:bg-surface-hover">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+            }
+        </section>
+
+        } @else if (tab() === 'stock') {
+
+        <!-- ===== Resumen de stock ===== -->
+        <section class="rounded-xl border border-border/70 bg-surface/30 p-3">
+            <div class="mb-2 flex items-center gap-2">
+                <h3 class="text-[11px] font-semibold uppercase tracking-wider text-text-subtle">Resumen de stock</h3>
+                <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold" [class]="stockClass(d.stock.status)">
+                    {{ stockLabel(d.stock.status) }}
+                </span>
+                <span class="ml-auto text-[11px] text-text-subtle">Mínimo: {{ d.minStock }}</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                @for (c of [
+                { l: 'Existencia', v: d.stock.onHand },
+                { l: 'Reservado', v: d.stock.reserved },
+                { l: 'Disponible', v: d.stock.available },
+                { l: 'Lotes con stock', v: d.stock.lotsWithStock },
+                { l: 'Facturable en ventas', v: d.stock.availableBillableInSales },
+                { l: 'Facturable en órdenes', v: d.stock.availableBillableInRepairOrders }
+                ]; track c.l) {
+                <div class="rounded-lg bg-surface/70 px-3 py-2 ring-1 ring-border/60">
+                    <p class="text-[10px] uppercase text-text-subtle">{{ c.l }}</p>
+                    <p class="text-lg font-bold tabular-nums text-heading">{{ c.v }}</p>
+                </div>
+                }
+                <div class="rounded-lg bg-emerald-500/10 px-3 py-2 ring-1 ring-emerald-500/20">
+                    <p class="text-[10px] uppercase text-text-subtle">Precio de venta</p>
+                    <p class="text-lg font-bold tabular-nums text-emerald-700 dark:text-emerald-300">
+                        {{ priceRange(d.stock.salePriceMin, d.stock.salePriceMax) }}
+                    </p>
+                </div>
+                <div class="rounded-lg bg-surface/70 px-3 py-2 ring-1 ring-border/60">
+                    <p class="text-[10px] uppercase text-text-subtle">Costo promedio</p>
+                    <p class="text-lg font-bold tabular-nums text-heading">{{ d.stock.avgUnitCost ?? '—' }}</p>
+                </div>
+            </div>
+            <p class="mt-2 text-[11px] text-text-subtle">
+                Los facturables pueden ser menores que el disponible. Precio base sugerido del producto: {{ display('basePrice') }}.
+            </p>
+        </section>
+
+        <!-- ===== Lotes ===== -->
+        <section class="rounded-xl border border-border/70 bg-surface/30 p-3">
+            <div class="mb-2 flex items-center gap-2">
+                <h3 class="text-[11px] font-semibold uppercase tracking-wider text-text-subtle">Lotes</h3>
+                <span class="rounded-full bg-surface-hover px-1.5 py-0.5 text-[10px] font-semibold text-body">{{ d.lots.length }}</span>
+            </div>
+
+            @if (d.lots.length === 0) {
+            <p class="py-2 text-xs text-text-subtle">Este producto aún no tiene lotes.</p>
+            } @else {
+            <div class="overflow-x-auto">
+                <table class="w-full border-collapse text-left text-xs">
+                    <thead>
+                        <tr class="border-b border-border/70 text-[10px] font-semibold uppercase tracking-wider text-text-subtle">
+                            <th class="px-2 py-2">Lote</th>
+                            <th class="px-2 py-2">Origen</th>
+                            <th class="px-2 py-2 text-right">Recib.</th>
+                            <th class="px-2 py-2 text-right">Exist.</th>
+                            <th class="px-2 py-2 text-right">Reserv.</th>
+                            <th class="px-2 py-2 text-right">Disp.</th>
+                            <th class="px-2 py-2 text-right">Consum.</th>
+                            <th class="px-2 py-2 text-right">Costo</th>
+                            <th class="px-2 py-2 text-right">Venta</th>
+                            <th class="px-2 py-2">Facturable</th>
+                            <th class="px-2 py-2">Fecha</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border/40">
+                        @for (l of d.lots; track l.id) {
+                        <tr class="align-top">
+                            <td class="px-2 py-2 font-mono font-semibold text-heading">#{{ l.code }}</td>
+                            <td class="px-2 py-2">
+                                <span class="text-heading">{{ originLabel(l.originType) }}</span>
+                                @if (l.receipt; as r) {
+                                <span class="block text-[10px] text-text-subtle">
+                                    Rec. #{{ r.code }}@if (r.documentNumber) { · {{ r.documentNumber }} }
+                                </span>
+                                @if (r.supplierName) {
+                                <span class="block text-[10px] text-text-subtle">{{ r.supplierName }}</span>
+                                }
+                                }
+                            </td>
+                            <td class="px-2 py-2 text-right tabular-nums">{{ l.quantityReceived }}</td>
+                            <td class="px-2 py-2 text-right tabular-nums">{{ l.onHand }}</td>
+                            <td class="px-2 py-2 text-right tabular-nums">{{ l.reserved }}</td>
+                            <td class="px-2 py-2 text-right font-semibold tabular-nums text-heading">{{ l.available }}</td>
+                            <td class="px-2 py-2 text-right tabular-nums">{{ l.consumed }}</td>
+                            <td class="px-2 py-2 text-right tabular-nums">{{ l.unitCost }}</td>
+                            <td class="px-2 py-2 text-right tabular-nums">
+                                {{ l.salePrice }}
+                                <span class="block text-[10px] text-text-subtle">
+                                    {{ l.hasTax ? (l.priceIncludesTax ? 'Incluye imp.' : 'Más imp.') : 'Sin imp.' }}
+                                </span>
+                            </td>
+                            <td class="px-2 py-2">
+                                <span class="block text-[10px]">Ventas: {{ l.billableInSales ? 'Sí' : 'No' }}</span>
+                                <span class="block text-[10px]">Órdenes: {{ l.billableInRepairOrders ? 'Sí' : 'No' }}</span>
+                                <span class="block text-[10px] text-text-subtle">Garantía: {{ l.warrantyDays }}d</span>
+                            </td>
+                            <td class="whitespace-nowrap px-2 py-2 text-text-subtle">{{ l.createdAt | date: 'dd/MM/yyyy' }}</td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (d.lotsTruncated) {
+            <p class="mt-2 text-[11px] text-amber-700 dark:text-amber-300">
+                Se muestran solo los lotes más recientes; hay más lotes no listados.
+            </p>
+            }
+            }
+        </section>
+
+        <!-- ===== Unidades (seriales) ===== -->
+        @if (d.trackingMode === 'SERIAL') {
+        <section class="rounded-xl border border-border/70 bg-surface/30 p-3">
+            <div class="mb-2 flex flex-wrap items-center gap-2">
+                <h3 class="text-[11px] font-semibold uppercase tracking-wider text-text-subtle">Unidades</h3>
+                @for (s of unitStatuses(); track s.status) {
+                <span class="rounded-full bg-surface-hover px-2 py-0.5 text-[10px] font-semibold text-body">
+                    {{ unitStatusLabel(s.status) }}: {{ s.count }}
+                </span>
+                }
+            </div>
+
+            @if (d.units.items.length === 0) {
+            <p class="py-2 text-xs text-text-subtle">Sin unidades registradas.</p>
+            } @else {
+            <ul class="max-h-56 divide-y divide-border/40 overflow-y-auto text-xs">
+                @for (u of d.units.items; track u.id) {
+                <li class="flex flex-wrap items-center gap-x-3 gap-y-1 py-1.5">
+                    <span class="rounded-full bg-surface-hover px-2 py-0.5 text-[10px] font-semibold text-body">
+                        {{ unitStatusLabel(u.status) }}
+                    </span>
+                    <span class="font-mono text-text-subtle">Lote #{{ u.lotCode }}</span>
+                    <span class="font-mono font-medium text-heading">{{ u.serials.join(' · ') || '—' }}</span>
+                    <span class="ml-auto text-text-subtle">{{ u.createdAt | date: 'dd/MM/yyyy' }}</span>
+                </li>
+                }
+            </ul>
+            }
+            @if (d.units.truncated) {
+            <p class="mt-2 text-[11px] text-amber-700 dark:text-amber-300">
+                Se muestran solo algunas unidades; hay más no listadas.
+            </p>
+            }
+        </section>
+        }
+
+        <!-- ===== Movimientos ===== -->
+        <section class="rounded-xl border border-border/70 bg-surface/30 p-3">
+            <div class="mb-2 flex items-center gap-2">
+                <h3 class="text-[11px] font-semibold uppercase tracking-wider text-text-subtle">Movimientos</h3>
+                <span class="rounded-full bg-surface-hover px-1.5 py-0.5 text-[10px] font-semibold text-body">{{ d.movements.length }}</span>
+            </div>
+
+            @if (d.movements.length === 0) {
+            <p class="py-2 text-xs text-text-subtle">Sin movimientos de inventario.</p>
+            } @else {
+            <ul class="max-h-64 divide-y divide-border/40 overflow-y-auto text-xs">
+                @for (m of d.movements; track m.id) {
+                <li class="flex flex-wrap items-center gap-x-3 gap-y-0.5 py-1.5">
+                    <span class="font-semibold text-heading">{{ movementLabel(m.type) }}</span>
+                    <span class="font-bold tabular-nums text-heading">{{ m.quantity }}</span>
+                    @if (m.lotCode !== null) {
+                    <span class="font-mono text-text-subtle">Lote #{{ m.lotCode }}</span>
+                    }
+                    @if (m.unitCost) {
+                    <span class="text-text-subtle">Costo: {{ m.unitCost }}</span>
+                    }
+                    <span class="ml-auto whitespace-nowrap text-text-subtle">{{ m.occurredAt | date: 'dd/MM/yyyy HH:mm' }}</span>
+                </li>
+                }
+            </ul>
+            }
+        </section>
+
+        } @else {
+
+        <!-- ===== Historial (línea de tiempo) ===== -->
+        <ol class="relative ml-3 space-y-5 border-l border-border/70 pt-1">
+            @for (e of entries(); track e.id) {
+            <li class="relative pl-6">
+                <span class="absolute -left-[7px] top-4 h-3 w-3 rounded-full ring-4 ring-surface" [class]="actionStyle(e.action).dot"></span>
+
+                <div class="rounded-2xl border border-border/70 bg-surface/30 px-4 py-3.5 shadow-sm transition-colors hover:bg-surface/60">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold" [class]="actionStyle(e.action).badge">{{ actionLabel(e.action) }}</span>
+                        <span class="text-xs text-text-subtle">{{ e.createdAt | date: 'dd/MM/yyyy HH:mm' }}</span>
+                    </div>
+                    <p class="mt-1.5 text-xs text-body">Usuario: <span class="font-mono">{{ e.userId ?? 'sistema' }}</span></p>
+
+                    @if (e.changes) {
+                    <ul class="mt-2.5 space-y-1.5 border-t border-border/40 pt-2.5 text-sm">
+                        @for (k of changeKeys(e); track k) {
+                        <li class="flex flex-wrap items-baseline gap-x-2">
+                            <span class="font-medium text-heading">{{ fieldLabel(k) }}:</span>
+                            @if (e.changes[k].from !== undefined) {
+                            <span class="rounded bg-red-500/10 px-1.5 text-red-600 line-through dark:text-red-400">{{ formatValue(k, e.changes[k].from) }}</span>
+                            }
+                            @if (e.changes[k].to !== undefined) {
+                            <span class="rounded bg-emerald-500/10 px-1.5 font-medium text-emerald-700 dark:text-emerald-300">→ {{ formatValue(k, e.changes[k].to) }}</span>
+                            }
+                        </li>
+                        }
+                    </ul>
+                    }
+                </div>
+            </li>
+            } @empty {
+            <p class="py-6 text-center text-sm text-body">Sin movimientos registrados.</p>
+            }
+        </ol>
+
+        @if (hasMore()) {
+        <button type="button" (click)="loadMoreHistory()" [disabled]="loadingMore()"
+            class="mx-auto block cursor-pointer rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary-soft">
+            {{ loadingMore() ? 'Cargando...' : 'Cargar más' }}
+        </button>
+        }
+        }
+    </div>
+
+    <!-- ===== Pie ===== -->
+    <div class="flex shrink-0 items-center justify-between gap-3 border-t border-border bg-surface px-6 py-3">
+        @if (!inactive()) {
+        @if (!confirmingDelete()) {
+        <button type="button" (click)="confirmingDelete.set(true)"
+            class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-red-300/60 px-4 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-500/10 dark:text-red-400">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="icons.trash" />
+            </svg>
+            Eliminar
+        </button>
+        } @else {
+        <div class="flex flex-wrap items-center gap-2 text-sm">
+            <span class="font-medium text-body">¿Eliminar este producto?</span>
+            <button type="button" (click)="confirmDelete()" [disabled]="deleting()"
+                class="cursor-pointer rounded-xl bg-red-600 px-4 py-2 font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-60">
+                {{ deleting() ? 'Eliminando...' : 'Sí, eliminar' }}
+            </button>
+            <button type="button" (click)="confirmingDelete.set(false)"
+                class="cursor-pointer rounded-xl border border-border px-4 py-2 font-semibold text-body hover:bg-surface-hover">No</button>
+        </div>
+        }
+        } @else { <span></span> }
+
+        <button type="button" (click)="close()"
+            class="cursor-pointer rounded-xl border border-border px-5 py-2 text-sm font-semibold text-body transition-colors hover:bg-surface-hover hover:text-heading">
+            Cerrar
+        </button>
+    </div>
+    }
+</div>

@@ -1,0 +1,283 @@
+<div class="surface-card flex max-h-[92dvh] flex-col overflow-hidden rounded-3xl shadow-2xl ring-1 ring-border/50">
+
+  <!-- Cabecera -->
+  <div
+    class="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-linear-to-br from-primary/15 via-surface to-surface px-6 py-4">
+    <div>
+      <h2 class="text-xl font-bold tracking-tight text-heading">Nuevo movimiento</h2>
+      <p class="text-xs text-body">Saca repuestos del stock hacia un empleado.</p>
+    </div>
+    <button type="button" (click)="cancel()" aria-label="Cerrar"
+      class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-border bg-surface/70 text-body transition-colors hover:bg-surface-hover hover:text-heading">
+      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+
+  <!-- Cuerpo -->
+  <div class="flex-1 space-y-5 overflow-y-auto px-6 py-4">
+
+    @if (loading()) {
+    <div class="py-10 text-center text-body">
+      <div class="mb-2 inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent">
+      </div>
+      <p class="text-sm">Cargando...</p>
+    </div>
+    } @else {
+
+ 
+
+    <!-- Motivo -->
+    <section class="rounded-2xl border border-border/70 bg-surface/30 p-3.5">
+      <label for="v-reason"
+        class="mb-1 block text-[11px] font-medium uppercase tracking-wider text-text-subtle">Motivo</label>
+      <select id="v-reason" class="input-field text-sm" [formControl]="reasonId"
+        [class.border-red-500]="submitted() && !reasonId.value">
+        <option value="">Selecciona...</option>
+        @for (r of outReasons(); track r.id) {
+        <option [value]="r.id">{{ r.name }}</option>
+        }
+      </select>
+
+      @if (selectedReason(); as r) {
+      <p class="mt-2 text-[11px] text-text-subtle">
+        {{ r.orderLink === 'REQUIRED' ? 'Este motivo exige una orden.' : 'Este motivo no se vincula a una orden.' }}
+        {{ r.isReturnable ? 'Admite retorno.' : 'No admite retorno.' }}
+      </p>
+      }
+    </section>
+
+    <!-- Empleado (y orden, paso 2b) -->
+    @if (selectedReason()) {
+    <section class="space-y-3 rounded-2xl border border-border/70 bg-surface/30 p-3.5">
+      <div>
+        <label class="mb-1 block text-[11px] font-medium uppercase tracking-wider text-text-subtle">Empleado</label>
+        <app-autocomplete [searchFn]="searchEmployees" [label]="employeeLabel" [sublabel]="employeeSub"
+          [invalid]="submitted() && !employee.value"
+          placeholder="Buscar empleado por nombre o usuario..." ariaLabel="Empleado"
+          [value]="employee.value" (valueChange)="employee.setValue($event)" />
+      </div>
+
+      @if (selectedReason()?.orderLink === 'REQUIRED') {
+<div>
+  <label class="mb-1 block text-[11px] font-medium uppercase tracking-wider text-text-subtle">Orden</label>
+  <app-autocomplete [searchFn]="searchOrders" [label]="orderLabel" [sublabel]="orderSub"
+    [invalid]="submitted() && !order.value"
+    placeholder="Número (#123), cliente, marca, modelo o serial..." ariaLabel="Orden"
+    [value]="order.value" (valueChange)="order.setValue($event)" />
+
+  <p class="mt-1.5 text-[11px] text-text-subtle">
+    Escribe <span class="font-mono">#123</span> para buscar un número exacto.
+  </p>
+
+  @if (orderSearchError()) {
+  <p class="mt-1.5 text-xs text-red-600 dark:text-red-400" role="alert">{{ orderSearchError() }}</p>
+  }
+
+  @if (order.value; as o) {
+  @if (orderBlocked()) {
+  <div class="mt-2 rounded-xl border border-red-300/60 bg-red-500/10 px-3 py-2 text-xs text-red-600 dark:text-red-400"
+    role="alert">
+    La orden #{{ o.orderNumber }} está en estado {{ o.status.name }} y no admite salidas.
+  </div>
+  } @else {
+  <div class="mt-2 rounded-xl bg-primary-soft px-3 py-2 text-xs text-primary">
+    Orden #{{ o.orderNumber }} · {{ o.customerName ?? 'Sin cliente' }} · {{ o.status.name }}
+  </div>
+  }
+  }
+</div>
+}
+    </section>
+    }
+
+<!-- Repuestos -->
+<section class="space-y-3">
+  <h3 class="text-[11px] font-semibold uppercase tracking-wider text-text-subtle">
+    Repuestos
+    <span class="ml-1 rounded-full bg-surface-hover px-1.5 py-0.5 text-[10px] font-semibold text-body">{{ voucherLines.length }}</span>
+  </h3>
+
+@if (voucherLines.length === 0 || showProductSearch()) {
+<app-autocomplete [searchFn]="searchProducts" [label]="productLabel" [sublabel]="productSub"
+  [clearOnSelect]="true" [invalid]="submitted() && voucherLines.length === 0"
+  placeholder="Buscar repuesto: nombre, SKU, código..." ariaLabel="Agregar repuesto"
+  (picked)="addLineProduct($event); showProductSearch.set(false)" />
+} @else {
+<button type="button" (click)="showProductSearch.set(true)"
+  class="cursor-pointer rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-body transition-colors hover:border-primary hover:text-primary">
+  + Agregar otro repuesto
+</button>
+}
+
+  @if (voucherLines.length === 0) {
+  <div class="rounded-2xl border border-dashed border-border/80 px-4 py-8 text-center text-sm text-text-subtle">
+    Busca un producto arriba para sacarlo del stock.
+  </div>
+  }
+
+  @for (line of voucherLines.controls; track line; let i = $index) {
+  @let lc = line.controls;
+  <article class="space-y-3 rounded-2xl border border-border/70 bg-surface/30 p-3.5">
+
+    <!-- Cabecera de la línea -->
+    <div class="flex items-start gap-2">
+      <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[11px] font-bold text-primary">{{ i + 1 }}</span>
+      <div class="min-w-0 flex-1">
+        <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <h4 class="truncate text-sm font-semibold text-heading">{{ lc.product.value.name }}</h4>
+          <span class="font-mono text-[11px] text-text-subtle">{{ lc.product.value.sku }}</span>
+          @if (isSerialLine(line)) {
+          <span class="rounded-full bg-primary-soft px-2 py-0.5 text-[10px] font-medium text-primary">Por serial/IMEI</span>
+          }
+        </div>
+        <p class="mt-0.5 text-[11px] text-text-subtle">
+          Total a sacar: <b class="tabular-nums text-heading">{{ lineTotalQty(line) }}</b>
+        </p>
+      </div>
+      <button type="button" (click)="removeVoucherLine(i)" [attr.aria-label]="'Quitar repuesto ' + (i + 1)"
+        class="shrink-0 cursor-pointer rounded-lg p-1.5 text-text-subtle transition-colors hover:bg-red-500/10 hover:text-red-600">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Lotes -->
+    @if (lc.lots.value === null) {
+    <div class="flex items-center gap-2 py-3 text-xs text-text-subtle">
+      <span class="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></span>
+      Cargando lotes...
+    </div>
+    } @else if (lc.loadError.value; as le) {
+    <div class="flex items-center justify-between gap-2 rounded-xl border border-red-300/60 bg-red-500/10 px-3 py-2 text-xs text-red-600 dark:text-red-400" role="alert">
+      <span>{{ le }}</span>
+      <button type="button" (click)="loadLots(line)" class="cursor-pointer font-semibold underline">Reintentar</button>
+    </div>
+    } @else if (lc.lots.value.length === 0) {
+    <div class="rounded-xl border border-dashed border-border/80 px-3 py-4 text-center text-xs text-text-subtle">
+      No hay lotes con existencias en la sucursal principal.
+    </div>
+    } @else {
+    <p class="text-[11px] font-medium uppercase tracking-wider text-text-subtle">
+      Elige de qué lote sacar (del más antiguo al más nuevo)
+    </p>
+    <ul class="space-y-2">
+      @for (lot of lc.lots.value; track lot.lotId) {
+      @let pick = pickFor(line, lot);
+      <li class="rounded-xl border bg-surface/50 p-2.5 transition-colors"
+        [class]="pick ? 'border-primary/60' : 'border-border/60'">
+
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          <label class="flex min-w-0 flex-1 items-center gap-2"
+            [class]="lot.available > 0 ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'">
+            <input type="checkbox" class="h-4 w-4 rounded border-border accent-primary"
+              [checked]="!!pick" [disabled]="lot.available <= 0" (change)="toggleLot(line, lot)" />
+            <span class="font-mono text-sm font-semibold text-heading">Lote #{{ lot.code }}</span>
+            <span class="truncate text-[11px] text-text-subtle">
+              {{ lot.createdAt | date: 'dd/MM/yyyy' }} · P. venta {{ lot.salePrice }}
+            </span>
+          </label>
+
+          <div class="flex items-center gap-3 text-[11px] tabular-nums text-text-subtle">
+            <span>Existencia {{ lot.onHand }}</span>
+            <span>Reservado {{ lot.reserved }}</span>
+            <span class="rounded-full px-2 py-0.5 font-semibold"
+              [class]="lot.available > 0
+                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                : 'bg-red-500/15 text-red-600 dark:text-red-400'">
+              Disp. {{ lot.available }}
+            </span>
+          </div>
+        </div>
+
+        @if (pick; as pk) {
+        @if (isSerialLine(line)) {
+        <!-- Equipos del lote -->
+        <div class="mt-2 space-y-1.5 border-t border-border/50 pt-2">
+          <p class="text-[11px] text-text-subtle">
+            Marca los equipos ({{ pk.controls.unitIds.value.length }} seleccionados)
+          </p>
+          @for (u of lot.units; track u.id) {
+          <label class="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1 hover:bg-surface-hover">
+            <input type="checkbox" class="h-4 w-4 rounded border-border accent-primary"
+              [checked]="isUnitPicked(pk, u.id)" (change)="toggleUnit(pk, u.id)" />
+            <span class="font-mono text-xs text-heading">{{ u.serials.join(' · ') }}</span>
+          </label>
+          } @empty {
+          <p class="text-[11px] text-text-subtle">Este lote no tiene equipos disponibles.</p>
+          }
+        </div>
+        } @else {
+        <!-- Cantidad -->
+        <div class="mt-2 flex items-center gap-2 border-t border-border/50 pt-2">
+          <label [for]="'q-' + lot.lotId" class="text-[11px] font-medium uppercase tracking-wider text-text-subtle">Cantidad</label>
+          <input [id]="'q-' + lot.lotId" type="number" min="1" [max]="lot.available" step="1"
+            class="input-field w-24 py-1.5 text-sm tabular-nums"
+            [value]="pk.controls.quantity.value ?? ''"
+            (input)="setQuantity(pk, $any($event.target).value)" />
+          <span class="text-[11px] text-text-subtle">máx. {{ lot.available }}</span>
+        </div>
+        }
+        }
+      </li>
+      }
+    </ul>
+    }
+    <!-- Fotos del producto -->
+<div class="space-y-2 border-t border-border/50 pt-2.5">
+  <button type="button" (click)="togglePhotos(line)"
+    class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-body transition-colors hover:border-primary hover:text-primary">
+    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round"
+        d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v13.5A1.5 1.5 0 003.75 21zm9-13.5h.008v.008H12.75V7.5z" />
+    </svg>
+    {{ lc.photosOpen.value ? 'Ocultar imágenes' : 'Agregar imágenes' }}
+    @if (lc.images.value.length) {
+    <span class="rounded-full bg-primary-soft px-1.5 py-0.5 text-[10px] font-bold text-primary">{{ lc.images.value.length }}</span>
+    }
+  </button>
+
+  <!-- Se oculta con CSS (no con @if) para no perder las miniaturas al plegar -->
+  <div [class.hidden]="!lc.photosOpen.value">
+    <app-image-upload [files]="lc.images.value" (filesChange)="lc.images.setValue($event)"
+      [max]="5" [maxSizeMb]="5" label="Arrastra las fotos de este producto aquí" />
+  </div>
+</div>
+  </article>
+  }
+</section>
+
+    <!-- Nota -->
+    <section class="rounded-2xl border border-border/70 bg-surface/30 p-3.5">
+      <label for="v-note" class="mb-1 block text-[11px] font-medium uppercase tracking-wider text-text-subtle">
+        Nota (opcional)
+      </label>
+      <textarea id="v-note" rows="2" maxlength="500" class="input-field text-sm"
+        placeholder="Ej. Pantalla para el cliente" [formControl]="note"></textarea>
+    </section>
+
+    }
+  </div>
+
+  <!-- Pie -->
+  <div class="shrink-0 space-y-2 border-t border-border bg-surface px-6 py-3">
+    @if (error()) {
+    <div class="rounded-xl border border-red-300/60 bg-red-500/10 px-4 py-2 text-sm text-red-600 dark:text-red-400"
+      role="alert">
+      {{ error() }}
+    </div>
+    }
+    <div class="flex items-center justify-end gap-2">
+      <button type="button" (click)="cancel()" [disabled]="saving()"
+        class="cursor-pointer rounded-xl border border-border px-5 py-2 text-sm font-semibold text-body transition-colors hover:bg-surface-hover hover:text-heading">
+        Cancelar
+      </button>
+      <button type="button" (click)="submit()" [disabled]="saving() || loading()"
+        class="btn-primary rounded-xl px-5 py-2 text-sm font-semibold disabled:opacity-60">
+        {{ saving() ? 'Guardando...' : 'Registrar movimiento' }}
+      </button>
+    </div>
+  </div>
+</div>

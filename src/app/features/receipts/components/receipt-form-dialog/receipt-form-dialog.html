@@ -1,0 +1,506 @@
+<div class="surface-card flex max-h-[92dvh] flex-col overflow-hidden rounded-3xl shadow-2xl ring-1 ring-border/50">
+
+  <!-- Cabecera -->
+  <div class="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-gradient-to-br from-primary/15 via-surface to-surface px-6 py-4">
+    <div>
+      <h2 class="text-xl font-bold tracking-tight text-heading">Nuevo ingreso</h2>
+      <p class="text-xs text-body">Registra la compra de productos a un proveedor.</p>
+    </div>
+      <button type="button" (click)="openAccessKeyLookup()"
+    class="flex cursor-pointer items-center gap-1.5 rounded-xl border border-border bg-surface/70 px-3 py-2 text-xs font-semibold text-body transition-colors hover:border-primary hover:text-primary">
+    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+    </svg>
+    Importar por clave de acceso
+  </button>
+    <button type="button" (click)="cancel()" aria-label="Cerrar"
+      class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-border bg-surface/70 text-body transition-colors hover:bg-surface-hover hover:text-heading">
+      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+
+  <!-- Cuerpo (Contenedor principal con scroll unificado) -->
+  <div class="flex-1 space-y-6 overflow-y-auto px-6 py-4">
+@if (accessKeyData(); as ak) {
+<p class="mb-3 rounded-xl bg-primary-soft px-3 py-2 text-xs text-primary">
+  Factura {{ ak.key.documentNumber }} importada por clave de acceso.
+</p>
+}
+    <!-- 1. Datos del documento -->
+    <section class="rounded-2xl border border-border/70 bg-surface/30 p-3.5">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div class="sm:col-span-3">
+          <label class="mb-1 block text-[11px] font-medium uppercase tracking-wider text-text-subtle">Proveedor</label>
+          <app-autocomplete [searchFn]="searchSuppliers" [label]="supplierLabel" [sublabel]="supplierSub"
+            [invalid]="submitted() && !form.controls.supplier.value"
+            placeholder="Buscar proveedor: razón social, nombre comercial, RUC o código..." ariaLabel="Proveedor"
+            createLabel="Crear nuevo proveedor" [value]="form.controls.supplier.value"
+            (valueChange)="form.controls.supplier.setValue($event)" (createClicked)="createSupplier()" />
+        </div>
+
+        <div>
+          <label for="r-doctype" class="mb-1 block text-[11px] font-medium uppercase tracking-wider text-text-subtle">Tipo de documento</label>
+          <select id="r-doctype" class="input-field text-sm" [formControl]="form.controls.documentTypeId"
+            [class.border-red-500]="submitted() && !form.controls.documentTypeId.value">
+            <option value="">Selecciona...</option>
+            @for (t of options()?.documentTypes; track t.id) {
+            <option [value]="t.id">{{ t.name }}</option>
+            }
+          </select>
+        </div>
+        <div>
+          <label for="r-docnum" class="mb-1 block text-[11px] font-medium uppercase tracking-wider text-text-subtle">N° de documento</label>
+          <input id="r-docnum" class="input-field text-sm" maxlength="50" placeholder="001-001-000123456"
+            [formControl]="form.controls.documentNumber" />
+        </div>
+        <div>
+          <label for="r-date" class="mb-1 block text-[11px] font-medium uppercase tracking-wider text-text-subtle">Fecha de emisión</label>
+          <input id="r-date" type="date" class="input-field text-sm" [formControl]="form.controls.issueDate" />
+        </div>
+
+        <div class="sm:col-span-3">
+          <label for="r-notes" class="mb-1 block text-[11px] font-medium uppercase tracking-wider text-text-subtle">Notas (opcional)</label>
+          <textarea id="r-notes" rows="2" maxlength="2000" class="input-field text-sm"
+            [formControl]="form.controls.notes"></textarea>
+        </div>
+
+        <div class="sm:col-span-3">
+          <label class="mb-1 block text-[11px] font-medium uppercase tracking-wider text-text-subtle">
+            Documento escaneado o foto (opcional)
+          </label>
+          <app-image-upload [(files)]="documentFiles" [multiple]="false" [accept]="docAccept" [maxSizeMb]="10"
+            label="Arrastra la factura o proforma aquí" />
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Productos y Líneas -->
+    <section class="space-y-3">
+      <div class="flex items-center justify-between">
+        <h3 class="text-[11px] font-semibold uppercase tracking-wider text-text-subtle">
+          Productos
+          <span class="ml-1 rounded-full bg-surface-hover px-1.5 py-0.5 text-[10px] font-semibold text-body">{{ lines.length }}</span>
+        </h3>
+        <button type="button" (click)="addNonInventoryLine()"
+          class="cursor-pointer rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-body transition-colors hover:border-primary hover:text-primary">
+          + Línea sin inventario
+        </button>
+      </div>
+
+      <app-autocomplete [searchFn]="searchProducts" [label]="productLabel" [sublabel]="productSub"
+        [clearOnSelect]="true" [invalid]="submitted() && lines.length === 0"
+        placeholder="Buscar producto: batería a13 sam, SKU, UPC, código..." ariaLabel="Buscar producto"
+        createLabel="Crear nuevo producto"
+        (picked)="addProduct($event)" (createClicked)="createProduct()" />
+
+      @if (lines.length === 0) {
+      <div class="rounded-2xl border border-dashed border-border/80 px-4 py-8 text-center text-sm text-text-subtle">
+        Busca un producto arriba y selecciónalo para agregarlo al ingreso.
+      </div>
+      }
+
+      <!-- Listado de líneas -->
+      @for (line of lines.controls; track line; let i = $index) {
+      @let c = line.controls;
+      <article class="space-y-3 rounded-2xl border border-border/70 bg-surface/30 p-3.5">
+
+        <!-- Producto -->
+        <div class="flex items-start gap-2">
+          <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[11px] font-bold text-primary">{{ i + 1 }}</span>
+
+          @if (c.product.value; as p) {
+          <div class="min-w-0 flex-1 space-y-1">
+            <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <h4 class="truncate text-sm font-semibold text-heading">{{ p.name }}</h4>
+              @if (p.quality) {
+              <span class="rounded-full bg-primary-soft px-2 py-0.5 text-[10px] font-medium text-primary">{{ p.quality }}</span>
+              }
+              @if (p.color) {
+              <span class="rounded-full bg-surface-hover px-2 py-0.5 text-[10px] font-medium text-body">{{ p.color }}</span>
+              }
+              <span class="font-mono text-[11px] text-text-subtle">{{ p.sku }}</span>
+            </div>
+
+            @if (p.models.length) {
+            <div class="flex flex-wrap gap-1">
+              @for (m of p.models.slice(0, 4); track m.id) {
+              <span class="rounded-full bg-teal-500/15 px-2 py-0.5 text-[10px] font-medium text-teal-700 dark:text-teal-300">{{ m.brand }} · {{ m.name }}</span>
+              }
+              @if (p.models.length > 4) {
+              <span class="rounded-full bg-teal-500/15 px-2 py-0.5 text-[10px] font-medium text-teal-700 dark:text-teal-300">+{{ p.models.length - 4 }}</span>
+              }
+            </div>
+            }
+
+            @if (p.lastReceipt; as lr) {
+            <p class="text-[11px] text-text-subtle">
+              Datos del último ingreso: #{{ lr.receiptCode }} · {{ lr.issueDate }} · {{ lr.supplierName }}
+            </p>
+            } @else {
+            <p class="text-[11px] text-text-subtle">Sin ingresos previos: se cargaron los valores del producto.</p>
+            }
+
+            @if (c.source.value; as s) {
+            <p class="text-[11px] text-text-subtle">Factura: {{ s.description }}</p>
+            <details class="text-[11px]">
+              <summary class="cursor-pointer select-none font-semibold text-primary hover:underline">Cambiar relación</summary>
+              <div class="mt-1.5 space-y-1.5">
+                <app-autocomplete [searchFn]="searchProducts" [label]="productLabel" [sublabel]="productSub"
+                  [clearOnSelect]="true" placeholder="Busca otro producto para relacionarlo..." ariaLabel="Cambiar producto"
+                  (picked)="reassignProduct(line, $event)" />
+                <div class="flex gap-3">
+                  <button type="button" (click)="unassign(line)"
+                    class="cursor-pointer font-semibold text-primary hover:underline">Quitar relación</button>
+                  <button type="button" (click)="markNonInventoryFromMapped(line)"
+                    class="cursor-pointer font-semibold text-primary hover:underline">Es un gasto, no inventario</button>
+                </div>
+              </div>
+            </details>
+            }
+          </div>
+          } @else if (!c.affectsInventory.value) {
+          <div class="min-w-0 flex-1 space-y-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="rounded-full bg-surface-hover px-2 py-0.5 text-[10px] font-medium text-body">Sin inventario</span>
+              @if (c.source.value?.supplierCode; as code) {
+              <span class="font-mono text-[11px] text-text-subtle">{{ code }}</span>
+              }
+            </div>
+            <input class="input-field py-1.5 text-sm" maxlength="200" placeholder="Descripción (ej. Transporte)"
+              [formControl]="c.description"
+              [class.border-red-500]="submitted() && !c.description.value.trim()" />
+            <app-autocomplete [searchFn]="searchProducts" [label]="productLabel" [sublabel]="productSub"
+              [clearOnSelect]="true" placeholder="¿Es inventario? Busca el producto para relacionarlo"
+              ariaLabel="Relacionar producto" (picked)="assignProduct(line, $event)" />
+            @if (c.source.value) {
+            <button type="button" (click)="unassign(line)"
+              class="cursor-pointer text-[11px] font-semibold text-primary hover:underline">
+              Dejar por relacionar
+            </button>
+            }
+          </div>
+          } @else if (c.source.value; as s) {
+          <div class="min-w-0 flex-1 space-y-1">
+            <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span class="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">
+                {{ reasonLabel(s.match.reason) }}
+              </span>
+              @if (s.supplierCode; as code) {
+              <span class="font-mono text-[11px] text-text-subtle">{{ code }}</span>
+              }
+            </div>
+            <p class="text-sm font-semibold text-heading">{{ s.description }}</p>
+            <p class="text-[11px] text-text-subtle">Cantidad XML: {{ s.quantity }} · P. Unit. XML: {{ s.unitPrice | number: '1.2-4' }}</p>
+
+            <app-autocomplete [searchFn]="searchProducts" [label]="productLabel" [sublabel]="productSub"
+              [clearOnSelect]="true" placeholder="Busca el producto para relacionarlo..." ariaLabel="Relacionar producto"
+              (picked)="assignProduct(line, $event)" />
+            <button type="button" (click)="markNonInventory(line)"
+              class="cursor-pointer text-[11px] font-semibold text-primary hover:underline">
+              Es un gasto, no inventario
+            </button>
+          </div>
+          }
+
+          <button type="button" (click)="removeLine(i)" [attr.aria-label]="'Quitar línea ' + (i + 1)"
+            class="shrink-0 cursor-pointer rounded-lg p-1.5 text-text-subtle transition-colors hover:bg-red-500/10 hover:text-red-600">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M14.74 9l-.35 9m-4.78 0L9.26 9m9.97-3.21c.34.05.68.11 1.02.17m-1.02-.17L18.16 19.67a2.25 2.25 0 01-2.24 2.08H8.08a2.25 2.25 0 01-2.24-2.08L4.77 5.79m14.46 0a48.11 48.11 0 00-3.48-.4m-12 .56c.34-.06.68-.12 1.02-.17m0 0a48.11 48.11 0 013.48-.4m7.5 0v-.92c0-1.18-.91-2.16-2.09-2.2a51.96 51.96 0 00-3.32 0c-1.18.04-2.09 1.02-2.09 2.2v.92m7.5 0a48.67 48.67 0 00-7.5 0" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Cantidades y precios -->
+        <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+          <div>
+            <label class="mb-1 block text-[10px] font-medium uppercase tracking-wider text-text-subtle">Cantidad</label>
+            <input type="number" min="1" step="1" class="input-field py-1.5 text-sm tabular-nums"
+              [formControl]="c.quantity" [readOnly]="isSerial(line)"
+              [attr.title]="isSerial(line) ? 'Se calcula según los equipos' : null" />
+          </div>
+          <div>
+            <label class="mb-1 block text-[10px] font-medium uppercase tracking-wider text-text-subtle">Costo unit. (sin imp.)</label>
+            <input type="number" min="0" step="0.0001" class="input-field py-1.5 text-sm tabular-nums" [formControl]="c.unitCost" />
+          </div>
+          <div>
+            <label class="mb-1 block text-[10px] font-medium uppercase tracking-wider text-text-subtle">Descuento total</label>
+            <input type="number" min="0" step="0.01" class="input-field py-1.5 text-sm tabular-nums" [formControl]="c.discount" />
+          </div>
+          <div>
+            <label class="mb-1 block text-[10px] font-medium uppercase tracking-wider text-text-subtle">IVA compra %</label>
+            <input type="number" min="0" max="100" step="0.01" class="input-field py-1.5 text-sm tabular-nums" [formControl]="c.purchaseTaxRate" />
+          </div>
+          @if (c.affectsInventory.value) {
+            <div>
+              <label class="mb-1 block text-[10px] font-medium uppercase tracking-wider text-text-subtle">Precio de venta</label>
+              <input type="number" min="0" step="0.01" class="input-field py-1.5 text-sm tabular-nums" [formControl]="c.salePrice" />
+            </div>
+            <div>
+              <label class="mb-1 block text-[10px] font-medium uppercase tracking-wider text-text-subtle">Garantía (días)</label>
+              <input type="number" min="0" step="1" class="input-field py-1.5 text-sm tabular-nums" [formControl]="c.warrantyDays" />
+            </div>
+          }
+        </div>
+
+        <!-- Equipos con IMEI / serial -->
+        @if (isSerial(line)) {
+        <div class="space-y-2 rounded-xl border border-primary/30 bg-primary-soft/30 p-2.5">
+          <div class="flex items-center justify-between">
+            <h4 class="text-[11px] font-semibold uppercase tracking-wider text-text-subtle">
+              Equipos ({{ c.units.length }})
+            </h4>
+            <button type="button" (click)="addUnit(line)"
+              class="cursor-pointer rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-semibold text-body transition-colors hover:border-primary hover:text-primary">
+              + Agregar equipo
+            </button>
+          </div>
+
+          @for (unit of c.units.controls; track unit; let u = $index) {
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="w-6 text-[11px] font-semibold text-text-subtle">#{{ u + 1 }}</span>
+
+            @for (serial of unit.controls; track serial; let s = $index) {
+            <div class="relative min-w-[11rem] flex-1">
+              <input class="input-field py-1.5 pr-7 font-mono text-xs" maxlength="100" [formControl]="serial"
+                [placeholder]="s === 0 ? 'IMEI / serial' : 'IMEI / serial ' + (s + 1)" />
+              @if (unit.length > 1) {
+              <button type="button" (click)="removeSerial(unit, s)" aria-label="Quitar IMEI/serial"
+                class="absolute inset-y-0 right-1.5 flex cursor-pointer items-center text-text-subtle hover:text-red-600">
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              }
+            </div>
+            }
+
+            @if (unit.length < 4) {
+            <button type="button" (click)="addSerial(unit)"
+              class="cursor-pointer rounded-lg px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary-soft">
+              + IMEI
+            </button>
+            }
+            @if (c.units.length > 1) {
+            <button type="button" (click)="removeUnit(line, u)" [attr.aria-label]="'Quitar equipo ' + (u + 1)"
+              class="cursor-pointer rounded-lg p-1 text-text-subtle hover:bg-red-500/10 hover:text-red-600">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            }
+          </div>
+          }
+        </div>
+        }
+
+        <!-- Fotos del producto -->
+        <details class="text-xs text-body">
+          <summary class="cursor-pointer select-none font-semibold text-text-subtle hover:text-heading">
+            Fotos del producto ({{ c.images.value.length }})
+          </summary>
+          <div class="mt-2">
+            <app-image-upload [files]="c.images.value" (filesChange)="c.images.setValue($event)" [max]="5"
+              label="Arrastra las fotos de este producto aquí" />
+          </div>
+        </details>
+
+        @if (c.affectsInventory.value && c.product.value) {
+        <div class="flex flex-wrap items-center gap-3 rounded-xl border border-border/60 bg-surface/40 px-3 py-2 text-xs">
+          <label class="flex cursor-pointer items-center gap-2 font-semibold text-body">
+            <input type="checkbox" class="h-4 w-4 rounded border-border accent-primary"
+              [checked]="c.printLabels.value" (change)="toggleLabel(line, $any($event.target).checked)" />
+            Imprimir etiquetas al registrar
+          </label>
+          @if (c.printLabels.value) {
+          <label class="flex items-center gap-2 text-text-subtle">
+            Cantidad
+            <input type="number" min="1" max="999" step="1" [formControl]="c.printCant"
+              class="input-field w-20 py-1 text-sm tabular-nums" aria-label="Cantidad de etiquetas" />
+          </label>
+          }
+        </div>
+        }
+
+        <!-- Opciones de venta + subtotal -->
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          @if (c.affectsInventory.value) {
+            <details class="text-xs text-body">
+              <summary class="cursor-pointer select-none font-semibold text-text-subtle hover:text-heading">Opciones de venta</summary>
+              <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
+                <label class="flex cursor-pointer items-center gap-2">
+                  <input type="checkbox" class="h-4 w-4 rounded border-border accent-primary" [formControl]="c.hasTax" />
+                  Incluye impuesto
+                </label>
+                <label class="flex cursor-pointer items-center gap-2">
+                  <input type="checkbox" class="h-4 w-4 rounded border-border accent-primary" [formControl]="c.priceIncludesTax" />
+                  Precio incluye impuesto
+                </label>
+                <label class="flex cursor-pointer items-center gap-2">
+                  <input type="checkbox" class="h-4 w-4 rounded border-border accent-primary" [formControl]="c.billableInSales" />
+                  Facturable en ventas
+                </label>
+                <label class="flex cursor-pointer items-center gap-2">
+                  <input type="checkbox" class="h-4 w-4 rounded border-border accent-primary" [formControl]="c.billableInRepairOrders" />
+                  Facturable en reparaciones
+                </label>
+              </div>
+            </details>
+          }
+
+          <p class="ml-auto text-xs text-text-subtle">
+            Subtotal línea:
+            <span class="text-sm font-bold tabular-nums text-heading">{{ lineSubtotal(line) | number: '1.2-2' }}</span>
+          </p>
+        </div>
+      </article>
+      }
+    </section>
+
+    <!-- 3. Pagos iniciales (Ahora integrado de forma limpia dentro del scroll) -->
+    <section class="space-y-3 pt-4 border-t border-border/60">
+      <div class="flex items-center justify-between">
+        <h3 class="text-[11px] font-semibold uppercase tracking-wider text-text-subtle">
+          Pagos iniciales
+          <span class="ml-1 rounded-full bg-surface-hover px-1.5 py-0.5 text-[10px] font-semibold text-body">
+            {{ payments.length }}
+          </span>
+        </h3>
+        <button type="button" (click)="addPayment()" [disabled]="payments.length >= 50"
+          class="cursor-pointer rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-body transition-colors hover:border-primary hover:text-primary disabled:opacity-50">
+          + Agregar pago
+        </button>
+      </div>
+
+      @if (payments.length === 0) {
+      <div class="rounded-2xl border border-dashed border-border/80 px-4 py-6 text-center text-sm text-text-subtle">
+        Puedes registrar pagos al momento de crear el ingreso (opcional).
+      </div>
+      }
+
+      @for (pay of payments.controls; track pay; let i = $index) {
+      @let pc = pay.controls;
+      <article class="space-y-3 rounded-2xl border border-border/70 bg-surface/30 p-3.5">
+        <div class="flex items-center justify-between">
+          <span class="flex h-6 w-6 items-center justify-center rounded-full bg-primary-soft text-[11px] font-bold text-primary">
+            {{ i + 1 }}
+          </span>
+          <button type="button" (click)="removePayment(i)" [attr.aria-label]="'Quitar pago ' + (i + 1)"
+            class="cursor-pointer rounded-lg p-1.5 text-text-subtle transition-colors hover:bg-red-500/10 hover:text-red-600">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+          <div>
+            <label class="mb-1 block text-[10px] font-medium uppercase tracking-wider text-text-subtle">Monto</label>
+            <input type="number" min="0.01" step="0.01" class="input-field py-1.5 text-sm tabular-nums"
+              [formControl]="pc.amount"
+              [class.border-red-500]="submitted() && (pc.amount.value === null || pc.amount.value <= 0)" />
+          </div>
+          <div>
+            <label class="mb-1 block text-[10px] font-medium uppercase tracking-wider text-text-subtle">Fecha de pago</label>
+            <input type="date" class="input-field py-1.5 text-sm" [formControl]="pc.paidAt" />
+          </div>
+          <div>
+            <label class="mb-1 block text-[10px] font-medium uppercase tracking-wider text-text-subtle">Método</label>
+            <select class="input-field py-1.5 text-sm" [formControl]="pc.method"
+              [class.border-red-500]="submitted() && !pc.method.value">
+              <option value="">Selecciona...</option>
+              @for (m of options()?.paymentMethods; track m.value) {
+              <option [value]="m.value">{{ m.label }}</option>
+              }
+            </select>
+          </div>
+          <div>
+            <label class="mb-1 block text-[10px] font-medium uppercase tracking-wider text-text-subtle">Referencia</label>
+            <input class="input-field py-1.5 text-sm" maxlength="100" placeholder="N° de transferencia, cheque..."
+              [formControl]="pc.reference" />
+          </div>
+          <div class="sm:col-span-2 lg:col-span-1">
+            <label class="mb-1 block text-[10px] font-medium uppercase tracking-wider text-text-subtle">Nota</label>
+            <input class="input-field py-1.5 text-sm" maxlength="500" [formControl]="pc.note" />
+          </div>
+        </div>
+
+        <div>
+          <label class="mb-1 block text-[10px] font-medium uppercase tracking-wider text-text-subtle">
+            Comprobante (opcional)
+          </label>
+          <app-image-upload
+            [files]="pc.proof.value"
+            (filesChange)="pc.proof.setValue($event)"
+            [multiple]="false"
+            [accept]="proofAccept"
+            [maxSizeMb]="5"
+            label="Arrastra el comprobante (PDF o imagen)" />
+        </div>
+      </article>
+      }
+
+      @if (payments.length > 0) {
+      <div class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/60 bg-surface/40 px-3 py-2 text-xs text-body">
+        <span>
+          Total pagos:
+          <b class="tabular-nums text-heading">{{ paymentsTotal() | number: '1.2-2' }}</b>
+        </span>
+        @let inv = totals().total;
+        @if (paymentsTotal() > inv + 0.001) {
+        <span class="font-medium text-red-600 dark:text-red-400">
+          Superan el total del ingreso ({{ inv | number: '1.2-2' }})
+        </span>
+        } @else {
+        <span class="text-text-subtle">
+          Restante: {{ (inv - paymentsTotal()) | number: '1.2-2' }}
+        </span>
+        }
+      </div>
+      }
+    </section>
+
+  </div> <!-- Cierre del cuerpo con scroll -->
+
+  <!-- Pie fijo -->
+  <div class="shrink-0 space-y-2 border-t border-border bg-surface px-6 py-3">
+    @if (error()) {
+    <div class="rounded-xl border border-red-300/60 bg-red-500/10 px-4 py-2 text-sm text-red-600 dark:text-red-400" role="alert">
+      {{ error() }}
+    </div>
+    }
+
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      @let t = totals();
+      <div class="flex flex-wrap items-baseline gap-x-5 gap-y-1 text-xs text-body tabular-nums">
+        <span>Subtotal <b class="text-heading">{{ t.subtotal | number: '1.2-2' }}</b></span>
+        <span>IVA <b class="text-heading">{{ t.tax | number: '1.2-2' }}</b></span>
+        <span class="text-sm">Total <b class="text-base text-heading">{{ t.total | number: '1.2-2' }}</b></span>
+      </div>
+
+      <div class="flex items-center gap-2">
+        @if (labelCount() > 0) {
+        <div class="flex items-center gap-2 text-xs text-body">
+          <label for="r-printer" class="font-medium uppercase tracking-wider text-text-subtle">Impresora</label>
+          <select id="r-printer" class="input-field w-auto py-1.5 text-sm" [value]="printer()"
+            (change)="setPrinter($any($event.target).value)" [disabled]="saving()">
+            @for (p of printers; track p.value) {
+            <option [value]="p.value">{{ p.label }}</option>
+            }
+          </select>
+        </div>
+        }
+        <button type="button" (click)="cancel()" [disabled]="saving()"
+          class="cursor-pointer rounded-xl border border-border px-5 py-2 text-sm font-semibold text-body transition-colors hover:bg-surface-hover hover:text-heading">
+          Cancelar
+        </button>
+        <button type="button" (click)="submit()" [disabled]="saving()"
+          class="btn-primary rounded-xl px-5 py-2 text-sm font-semibold disabled:opacity-60">
+          {{ saving() ? 'Guardando...' : 'Registrar ingreso' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

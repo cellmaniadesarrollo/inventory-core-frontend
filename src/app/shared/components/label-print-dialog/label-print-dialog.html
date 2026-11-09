@@ -1,0 +1,77 @@
+<div class="surface-card flex max-h-[92dvh] flex-col overflow-hidden rounded-3xl shadow-2xl ring-1 ring-border/50">
+
+  <div class="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-gradient-to-br from-primary/15 via-surface to-surface px-6 py-4">
+    <div>
+      <h2 class="text-xl font-bold tracking-tight text-heading">Imprimir etiquetas</h2>
+      <p class="text-xs text-body">Elige impresora, líneas y cantidad de etiquetas.</p>
+    </div>
+    <button type="button" (click)="close()" [disabled]="printing()" aria-label="Cerrar"
+      class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-border bg-surface/70 text-body transition-colors hover:bg-surface-hover hover:text-heading disabled:opacity-50">
+      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+
+  <div class="flex shrink-0 flex-wrap items-center justify-between gap-3 px-6 pt-4">
+    <div class="flex items-center gap-2">
+      <label for="lp-printer" class="text-[11px] font-medium uppercase tracking-wider text-text-subtle">Impresora</label>
+      <select id="lp-printer" class="input-field w-auto py-1.5 text-sm" [value]="printer()"
+        (change)="setPrinter($any($event.target).value)" [disabled]="printing()">
+        @for (p of printers; track p.value) {
+        <option [value]="p.value">{{ p.label }}</option>
+        }
+      </select>
+    </div>
+
+    @if (!allDone()) {
+    <label class="flex cursor-pointer items-center gap-2 text-xs font-semibold text-body">
+      <input type="checkbox" class="h-4 w-4 rounded border-border accent-primary"
+        [checked]="allSelected()" (change)="toggleAll()" [disabled]="printing()" />
+      Seleccionar todas
+    </label>
+    }
+  </div>
+
+  <div class="flex-1 space-y-2 overflow-y-auto px-6 py-4">
+    @for (r of rows(); track r.lotId; let i = $index) {
+    <div class="flex items-center gap-3 rounded-xl border border-border/70 bg-surface/30 px-3 py-2.5"
+      [class.opacity-60]="!r.selected && r.status !== 'ok'">
+      <input type="checkbox" class="h-4 w-4 shrink-0 rounded border-border accent-primary"
+        [checked]="r.selected" (change)="toggle(i)"
+        [disabled]="printing() || r.status === 'ok'" [attr.aria-label]="'Imprimir ' + r.label" />
+      <div class="min-w-0 flex-1">
+        <p class="truncate text-sm font-semibold text-heading">{{ r.label }}</p>
+        @if (r.message) {
+        <p class="text-[11px]"
+          [class]="r.status === 'ok' ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-600 dark:text-red-400'">
+          {{ r.message }}</p>
+        }
+      </div>
+      <input type="number" min="1" max="999" step="1" [value]="r.cant" (input)="onCant(i, $event)"
+        [disabled]="printing() || r.status === 'ok'" [attr.aria-label]="'Cantidad de ' + r.label"
+        class="input-field w-20 py-1.5 text-sm tabular-nums" />
+    </div>
+    }
+  </div>
+
+  <div class="shrink-0 space-y-2 border-t border-border bg-surface px-6 py-3">
+    @if (error()) {
+    <div class="rounded-xl border border-red-300/60 bg-red-500/10 px-4 py-2 text-sm text-red-600 dark:text-red-400" role="alert">
+      {{ error() }}
+    </div>
+    }
+    <div class="flex items-center justify-end gap-2">
+      <button type="button" (click)="close()" [disabled]="printing()"
+        class="cursor-pointer rounded-xl border border-border px-5 py-2 text-sm font-semibold text-body transition-colors hover:bg-surface-hover hover:text-heading disabled:opacity-50">
+        {{ allDone() ? 'Cerrar' : 'Cancelar' }}
+      </button>
+      @if (!allDone()) {
+      <button type="button" (click)="print()" [disabled]="printing() || !toPrint().length"
+        class="btn-primary rounded-xl px-5 py-2 text-sm font-semibold disabled:opacity-60">
+        {{ printing() ? 'Imprimiendo...' : hasFailed() ? 'Reintentar fallidos' : 'Imprimir (' + toPrint().length + ')' }}
+      </button>
+      }
+    </div>
+  </div>
+</div>

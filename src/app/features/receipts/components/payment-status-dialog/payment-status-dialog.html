@@ -1,0 +1,106 @@
+<div class="surface-card flex max-h-[92dvh] flex-col overflow-hidden rounded-3xl shadow-2xl ring-1 ring-border/50">
+    <div
+        class="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-gradient-to-br from-primary/15 via-surface to-surface px-6 py-4">
+        <div>
+            <h2 class="text-lg font-bold tracking-tight text-heading">Registrar pago</h2>
+            <p class="text-xs text-body">Ingreso #{{ data.code }}</p>
+        </div>
+        <button type="button" (click)="cancel()" aria-label="Cerrar"
+            class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-border bg-surface/70 text-body transition-colors hover:bg-surface-hover hover:text-heading">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+    </div>
+
+    <div class="flex-1 space-y-4 overflow-y-auto px-6 py-5">
+        <!-- Resumen -->
+        <div class="grid grid-cols-3 gap-2 text-center">
+            <div class="rounded-xl border border-border/70 bg-surface/30 px-2 py-2">
+                <span class="block text-[10px] font-medium uppercase text-text-subtle">Total</span>
+                <span class="text-sm font-bold tabular-nums text-heading">{{ data.total }}</span>
+            </div>
+            <div class="rounded-xl border border-border/70 bg-surface/30 px-2 py-2">
+                <span class="block text-[10px] font-medium uppercase text-text-subtle">Pagado</span>
+                <span class="text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-300">{{ data.paidTotal
+                    }}</span>
+            </div>
+            <div class="rounded-xl border border-border/70 bg-surface/30 px-2 py-2">
+                <span class="block text-[10px] font-medium uppercase text-text-subtle">Saldo</span>
+                <span class="text-sm font-bold tabular-nums text-amber-700 dark:text-amber-300">{{ data.balance
+                    }}</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div>
+                <label for="p-amount"
+                    class="mb-1 block text-[11px] font-medium uppercase tracking-wider text-text-subtle">Monto</label>
+                <input id="p-amount" type="number" min="0.01" step="0.01" inputmode="decimal"
+                    class="input-field text-sm tabular-nums" [value]="amount()"
+                    (input)="amount.set($any($event.target).value)" />
+            </div>
+            <div>
+                <label for="p-date"
+                    class="mb-1 block text-[11px] font-medium uppercase tracking-wider text-text-subtle">Fecha del
+                    pago</label>
+                <input id="p-date" type="date" class="input-field text-sm" [max]="maxDate" [value]="paidAt()"
+                    (change)="paidAt.set($any($event.target).value)" />
+            </div>
+            <div>
+                <label for="p-method"
+                    class="mb-1 block text-[11px] font-medium uppercase tracking-wider text-text-subtle">Método</label>
+                <select id="p-method" class="input-field text-sm" [disabled]="loadingMethods()"
+                    (change)="method.set($any($event.target).value)">
+                    @if (loadingMethods()) {
+                    <option value="">Cargando...</option>
+                    } @else {
+                    <option value="">Selecciona...</option>
+                    @for (m of methods(); track m.value) {
+                    <option [value]="m.value" [selected]="m.value === method()">{{ m.label }}</option>
+                    }
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div>
+            <label for="p-ref"
+                class="mb-1 block text-[11px] font-medium uppercase tracking-wider text-text-subtle">Referencia
+                (opcional)</label>
+            <input id="p-ref" maxlength="100" class="input-field text-sm" placeholder="N° de transferencia, cheque..."
+                [value]="reference()" (input)="reference.set($any($event.target).value)" />
+        </div>
+
+        <div>
+            <label for="p-note"
+                class="mb-1 block text-[11px] font-medium uppercase tracking-wider text-text-subtle">Nota
+                (opcional)</label>
+            <textarea id="p-note" rows="2" maxlength="500" class="input-field text-sm" placeholder="Ej.: Primera cuota"
+                [value]="note()" (input)="note.set($any($event.target).value)"></textarea>
+        </div>
+
+        <div>
+            <label class="mb-1 block text-[11px] font-medium uppercase tracking-wider text-text-subtle">Comprobante
+                (opcional)</label>
+            <app-image-upload [(files)]="proofFiles" [multiple]="false" [accept]="proofAccept" [maxSizeMb]="10"
+                label="Arrastra el comprobante aquí" />
+        </div>
+
+        @if (error()) {
+        <div class="rounded-xl border border-red-300/60 bg-red-500/10 px-4 py-2 text-sm text-red-600 dark:text-red-400"
+            role="alert">{{ error() }}</div>
+        }
+    </div>
+
+    <div class="flex shrink-0 items-center justify-end gap-2 border-t border-border bg-surface px-6 py-3">
+        <button type="button" (click)="cancel()" [disabled]="saving()"
+            class="cursor-pointer rounded-xl border border-border px-5 py-2 text-sm font-semibold text-body transition-colors hover:bg-surface-hover hover:text-heading">
+            Cancelar
+        </button>
+        <button type="button" (click)="save()" [disabled]="saving()"
+            class="btn-primary rounded-xl px-5 py-2 text-sm font-semibold disabled:opacity-60">
+            {{ saving() ? 'Guardando...' : 'Registrar pago' }}
+        </button>
+    </div>
+</div>
