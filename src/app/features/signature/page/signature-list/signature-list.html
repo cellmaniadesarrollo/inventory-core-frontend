@@ -1,0 +1,68 @@
+<section class="space-y-5">
+  <header class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-xl text-heading">Firmas electrónicas</h1>
+      <p class="text-sm text-body">{{ items().length }} firma(s) registrada(s)</p>
+    </div>
+    <button type="button" class="btn-primary" (click)="openUpload()">
+      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+      </svg>
+      Subir firma
+    </button>
+  </header>
+
+  @if (flash()) {
+    <div class="rounded-xl border border-emerald-300/60 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">
+      {{ flash() }}
+    </div>
+  }
+
+  @if (error()) {
+    <div class="flex items-center justify-between gap-3 rounded-xl border border-red-300/60 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-300">
+      <span>{{ error() }}</span>
+      <button type="button" (click)="reload()" class="font-semibold underline">Reintentar</button>
+    </div>
+  }
+
+  @if (loading()) {
+    <p class="text-sm text-body">Cargando firmas...</p>
+  } @else {
+    <div class="space-y-3">
+      @for (s of items(); track s.id) {
+        <article class="surface-card p-4 transition-all duration-150 hover:border-primary/30 hover:shadow-md">
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="min-w-0">
+              <h2 class="truncate text-base font-semibold text-text">{{ s.subject }}</h2>
+              <p class="mt-0.5 text-sm text-body">
+                Vence el {{ s.expiresAt | date: 'dd/MM/yyyy' : '-0500' }}
+              </p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="rounded-full px-2.5 py-1 text-xs font-semibold" [class]="expiryClass(s)">
+                {{ expiryLabel(s) }}
+              </span>
+              @if (!s.active) {
+                <span class="rounded-full bg-surface-hover px-2.5 py-1 text-xs font-semibold text-text-muted">Inactiva</span>
+              }
+            </div>
+          </div>
+
+          <div class="mt-3 flex flex-wrap gap-1.5">
+            @for (b of s.branches; track b.id) {
+              <span class="rounded-full bg-primary-soft px-2.5 py-1 text-xs font-medium text-primary">{{ b.name }}</span>
+            } @empty {
+              <span class="text-xs text-text-subtle">Sin sucursales asignadas</span>
+            }
+          </div>
+        </article>
+      } @empty {
+        @if (!error()) {
+          <div class="surface-card p-8 text-center">
+            <p class="text-sm text-body">Aún no hay firmas. Sube la primera con el botón "Subir firma".</p>
+          </div>
+        }
+      }
+    </div>
+  }
+</section>
