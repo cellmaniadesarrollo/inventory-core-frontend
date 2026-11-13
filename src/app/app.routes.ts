@@ -36,6 +36,11 @@ export const routes: Routes = [
                 loadChildren: () =>
                     import('./features/stock-vouchers/stock-vouchers.routes').then(m => m.STOCK_VOUCHERS_ROUTES),
             },
+            {
+                path: 'firmas',
+                loadChildren: () => 
+                    import('./features/signature/signature.routes').then((m) => m.SIGNATURE_ROUTES),
+            },
         ],
     },
     { path: '**', redirectTo: 'login' },
