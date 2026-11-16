@@ -1,0 +1,86 @@
+<section class="space-y-5">
+  <header class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-xl text-heading">Clientes</h1>
+      <p class="text-sm text-body">Datos de facturación de tu empresa.</p>
+    </div>
+    <button type="button" class="btn-primary" (click)="openDialog(null)">
+      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+      </svg>
+      Nuevo
+    </button>
+  </header>
+
+  <div class="flex flex-wrap gap-2">
+    <input type="search" class="input-field min-w-0 flex-1" placeholder="Buscar por identificación, nombre o correo"
+      [value]="query()" (input)="onInput($any($event.target).value)" />
+    <select class="input-field sm:w-40" [value]="status()" (change)="onStatus($any($event.target).value)">
+      <option value="true">Activos</option>
+      <option value="false">Inactivos</option>
+      <option value="all">Todos</option>
+    </select>
+  </div>
+
+  @if (flash()) {
+    <div class="rounded-xl border border-emerald-300/60 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">{{ flash() }}</div>
+  }
+  @if (error()) {
+    <div class="rounded-xl border border-red-300/60 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-300">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <p class="text-sm text-body">Cargando...</p>
+  }
+
+  @for (c of items(); track c.id) {
+    <article class="surface-card p-4 transition-all duration-150 hover:border-primary/30 hover:shadow-md">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="min-w-0">
+          <h2 class="truncate text-base font-semibold text-text">{{ displayName(c) }}</h2>
+          <p class="mt-0.5 text-sm text-body">{{ c.idType?.name }} {{ c.idNumber }}</p>
+        </div>
+        <div class="flex items-center gap-2">
+          @if (c.personType?.name) {
+            <span class="rounded-full bg-primary-soft px-2.5 py-1 text-xs font-semibold text-primary">{{ c.personType?.name }}</span>
+          }
+          @if (!c.isActive) {
+            <span class="rounded-full bg-surface-hover px-2.5 py-1 text-xs font-semibold text-text-muted">Inactivo</span>
+          }
+        </div>
+      </div>
+      <div class="mt-3 flex flex-wrap items-end justify-between gap-3">
+        <div class="min-w-0 space-y-0.5 text-sm text-body">
+          <p class="truncate">{{ c.mainEmail }}</p>
+          @if (c.cellphone || c.phone) {
+            <p>{{ c.cellphone || c.phone }}</p>
+          }
+          <p class="truncate text-text-subtle">{{ c.address }}</p>
+        </div>
+        <button type="button" (click)="openDialog(c)" class="text-xs font-semibold text-primary hover:underline">Editar</button>
+      </div>
+    </article>
+  } @empty {
+    @if (!loading() && !error()) {
+      <div class="surface-card p-8 text-center">
+        <p class="text-sm text-body">No hay clientes con esos filtros.</p>
+        <button type="button" (click)="openDialog(null)" class="mt-2 text-sm font-semibold text-primary hover:underline">
+          Crear uno nuevo
+        </button>
+      </div>
+    }
+  }
+
+  @if (pages() > 1) {
+    <footer class="flex items-center justify-between text-sm text-body">
+      <span>{{ total() }} clientes</span>
+      <div class="flex items-center gap-2">
+        <button type="button" (click)="go(page() - 1)" [disabled]="page() === 1"
+          class="rounded-lg border border-border px-3 py-1.5 disabled:opacity-50">Anterior</button>
+        <span>{{ page() }} / {{ pages() }}</span>
+        <button type="button" (click)="go(page() + 1)" [disabled]="page() === pages()"
+          class="rounded-lg border border-border px-3 py-1.5 disabled:opacity-50">Siguiente</button>
+      </div>
+    </footer>
+  }
+</section>

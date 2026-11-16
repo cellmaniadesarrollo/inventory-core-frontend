@@ -1,10 +1,14 @@
 import { Dialog } from '@angular/cdk/dialog';
 import { DatePipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { EMPTY, catchError, switchMap, tap } from 'rxjs';
+import { SignatureBranchesDialog } from '../../components/signature-branches-dialog/signature-branches-dialog';
+import { SignatureIssuerDialog } from '../../components/signature-issuer-dialog/signature-issuer-dialog';
 import { SignatureUploadDialog } from '../../components/signature-upload-dialog/signature-upload-dialog';
+import { IssuersService } from '../../services/issuer.service';
 import { SignaturesService } from '../../services/signature.service';
+import { Issuer } from '../../types/issuer.type';
 import { Signature, SignatureCreated } from '../../types/signature.type';
 
 type ExpiryState = 'expired' | 'soon' | 'ok';
@@ -31,13 +35,20 @@ const SOON_DAYS = 30;
 })
 export class SignatureList {
   private readonly api = inject(SignaturesService);
+  private readonly issuersApi = inject(IssuersService);
   private readonly dialog = inject(Dialog);
 
   readonly items = signal<Signature[]>([]);
+  readonly issuers = signal<Issuer[]>([]);
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly flash = signal<string | null>(null);
   private readonly reloadTick = signal(0);
+
+  /** id → "RUC · Razón social". */
+  private readonly issuerMap = computed(
+    () => new Map(this.issuers().map((i) => [i.id, `${i.ruc} · ${i.legalName}`])),
+  );
 
   constructor() {
     toObservable(this.reloadTick)
@@ -60,10 +71,21 @@ export class SignatureList {
         this.error.set(null);
         this.loading.set(false);
       });
+
+    this.loadIssuers();
   }
 
   reload() {
+    this.loadIssuers();
     this.reloadTick.update((n) => n + 1);
+  }
+
+  private loadIssuers() {
+    this.issuersApi.list().subscribe({ next: (res) => this.issuers.set(res.items) });
+  }
+
+  issuerLabel(id?: string | null): string | null {
+    return id ? (this.issuerMap().get(id) ?? 'Emisor desconocido') : null;
   }
 
   openUpload() {
@@ -98,5 +120,37 @@ export class SignatureList {
 
   expiryClass(s: Signature): string {
     return EXPIRY_CLASS[this.expiryState(s)];
+  }
+
+  editBranches(s: Signature) {
+    this.dialog
+      .open<Signature>(SignatureBranchesDialog, {
+        width: '36rem',
+        maxWidth: '95vw',
+        data: s,
+        autoFocus: 'first-tabbable',
+        disableClose: true,
+      })
+      .closed.subscribe((updated) => {
+        if (!updated) return;
+        this.showFlash(`Sucursales de ${updated.subject} actualizadas.`);
+        this.reload();
+      });
+  }
+
+  editIssuer(s: Signature) {
+    this.dialog
+      .open<Signature>(SignatureIssuerDialog, {
+        width: '32rem',
+        maxWidth: '95vw',
+        data: s,
+        autoFocus: 'first-tabbable',
+        disableClose: true,
+      })
+      .closed.subscribe((updated) => {
+        if (!updated) return;
+        this.showFlash(`Emisor de ${updated.subject} actualizado.`);
+        this.reload();
+      });
   }
 }

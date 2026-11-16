@@ -1,8 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { environment } from '../../../../environments/environment';
-import { CreateSignatureRequest, SignatureCreated, SignatureListResponse, SignatureNewDataResponse } from '../types/signature.type';
-
+import { CreateSignatureRequest, Signature, SignatureCreated, SignatureListResponse, SignatureNewDataResponse, UpdateSignatureBranchesRequest } from '../types/signature.type';
+export interface UpdateSignatureIssuerRequest { issuerId: string | null; }
 
 @Injectable({ providedIn: 'root' })
 export class SignaturesService {
@@ -23,5 +23,13 @@ export class SignaturesService {
     form.append('data', JSON.stringify(body));
     form.append('file', file, file.name);
     return this.http.post<SignatureCreated>(this.base, form);
+  }
+
+  updateBranches(id: string, body: UpdateSignatureBranchesRequest) {
+    return this.http.put<Signature>(`${this.base}/${id}/branches`, body);
+  }
+
+  updateIssuer(id: string, body: UpdateSignatureIssuerRequest) {
+    return this.http.put<Signature>(`${this.base}/${id}/issuer`, body);
   }
 }

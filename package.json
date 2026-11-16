@@ -20,6 +20,7 @@
     "@angular/router": "^22.0.0",
     "@nestjs/mapped-types": "*",
     "flatpickr": "^4.6.13",
+    "node-forge": "^1.4.3",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },

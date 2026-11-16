@@ -41,6 +41,11 @@ export const routes: Routes = [
                 loadChildren: () => 
                     import('./features/signature/signature.routes').then((m) => m.SIGNATURE_ROUTES),
             },
+            {
+                path: 'clientes',
+                loadChildren: () => 
+                    import('./features/clients/clients.routes').then((m) => m.CLIENTS_ROUTES),
+            },
         ],
     },
     { path: '**', redirectTo: 'login' },
