@@ -11,6 +11,7 @@ export interface Signature {
   active: boolean;
   createdAt: string;
   branches: SignatureBranchRef[];
+  issuerId?: string | null;
 }
 
 /** GET /signatures (propuesta, sin confirmar) */
@@ -35,6 +36,7 @@ export interface CreateSignatureRequest {
   clientRequestId: string;
   password: string;
   branchIds: string[];
+  issuerId?: string;
 }
 
 /** Respuesta de POST /signatures. La clave y la key de S3 nunca salen. */
@@ -46,4 +48,8 @@ export interface SignatureCreated {
   createdAt: string;
   branchIds?: string[];
   replayed: boolean;
+}
+
+export interface UpdateSignatureBranchesRequest {
+  branchIds: string[];
 }

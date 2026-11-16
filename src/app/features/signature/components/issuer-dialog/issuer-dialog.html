@@ -1,0 +1,83 @@
+<div class="surface-card flex max-h-[90vh] flex-col overflow-hidden shadow-xl">
+  <header class="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
+    <div>
+      <h2 class="text-lg text-heading">{{ isEdit ? 'Editar emisor' : 'Nuevo emisor' }}</h2>
+      <p class="mt-0.5 text-sm text-body">Datos del contribuyente que emite las facturas (RUC).</p>
+    </div>
+    <button type="button" (click)="close()" [disabled]="saving()" aria-label="Cerrar"
+      class="rounded-lg p-1.5 text-text-muted transition-colors hover:bg-surface-hover disabled:opacity-50">
+      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </header>
+
+  <div class="flex-1 space-y-4 overflow-y-auto px-6 py-5" [formGroup]="form">
+    @if (error()) {
+      <div class="rounded-xl border border-red-300/60 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-300">{{ error() }}</div>
+    }
+
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label for="is-ruc" class="mb-1.5 block text-sm font-medium text-heading">RUC</label>
+        <input id="is-ruc" formControlName="ruc" maxlength="13" inputmode="numeric" class="input-field"
+          [class.border-red-400]="invalid('ruc')" />
+        @if (invalid('ruc')) {
+          <p class="mt-1.5 text-xs text-red-600 dark:text-red-300">13 dígitos, terminado en 001.</p>
+        }
+      </div>
+      <div>
+        <label for="is-env" class="mb-1.5 block text-sm font-medium text-heading">Ambiente</label>
+        <select id="is-env" formControlName="environment" class="input-field">
+          <option [ngValue]="1">Pruebas</option>
+          <option [ngValue]="2">Producción</option>
+        </select>
+      </div>
+
+      <div class="sm:col-span-2">
+        <label for="is-legal" class="mb-1.5 block text-sm font-medium text-heading">Razón social / nombres</label>
+        <input id="is-legal" formControlName="legalName" class="input-field" [class.border-red-400]="invalid('legalName')" />
+      </div>
+      <div class="sm:col-span-2">
+        <label for="is-trade" class="mb-1.5 block text-sm font-medium text-heading">Nombre comercial (opcional)</label>
+        <input id="is-trade" formControlName="tradeName" class="input-field" />
+      </div>
+      <div class="sm:col-span-2">
+        <label for="is-hq" class="mb-1.5 block text-sm font-medium text-heading">Dirección de la matriz</label>
+        <input id="is-hq" formControlName="headquartersAddress" class="input-field"
+          [class.border-red-400]="invalid('headquartersAddress')" />
+      </div>
+      <div>
+        <label for="is-sp" class="mb-1.5 block text-sm font-medium text-heading">Contribuyente especial (opcional)</label>
+        <input id="is-sp" formControlName="specialTaxpayer" maxlength="5" inputmode="numeric" class="input-field"
+          [class.border-red-400]="invalid('specialTaxpayer')" />
+        @if (invalid('specialTaxpayer')) {
+          <p class="mt-1.5 text-xs text-red-600 dark:text-red-300">Número de resolución: 3 a 5 dígitos.</p>
+        }
+      </div>
+    </div>
+
+    <div class="flex flex-wrap gap-x-6 gap-y-2">
+      <label class="flex items-center gap-2 text-sm text-text">
+        <input type="checkbox" formControlName="accountingRequired" class="h-4 w-4 accent-primary" />
+        Obligado a llevar contabilidad
+      </label>
+      @if (isEdit) {
+        <label class="flex items-center gap-2 text-sm text-text">
+          <input type="checkbox" formControlName="active" class="h-4 w-4 accent-primary" />
+          Activo
+        </label>
+      }
+    </div>
+  </div>
+
+  <footer class="flex justify-end gap-3 border-t border-border px-6 py-4">
+    <button type="button" (click)="close()" [disabled]="saving()"
+      class="rounded-xl border border-border px-5 py-2.5 text-sm font-semibold text-text transition-colors hover:bg-surface-hover disabled:opacity-50">
+      Cancelar
+    </button>
+    <button type="button" class="btn-primary" (click)="save()" [disabled]="saving()">
+      {{ saving() ? 'Guardando...' : 'Guardar' }}
+    </button>
+  </footer>
+</div>
