@@ -1,0 +1,52 @@
+<div class="surface-card space-y-4 p-5">
+  <div>
+    <h3 class="text-lg font-bold tracking-tight text-heading">Rechazar solicitud</h3>
+    <p class="mt-0.5 text-xs text-text-subtle">
+      Este motivo lo verá la persona que pidió cancelar. Escríbelo pensando en ella.
+    </p>
+  </div>
+
+  <!-- Resumen de la solicitud -->
+  <div class="space-y-1 rounded-xl border border-border/70 bg-surface-hover/40 px-3.5 py-3 text-xs text-text-subtle">
+    <p>
+      <span class="font-semibold text-heading">{{ data.item.product.name }}</span>
+      <span class="font-mono"> · {{ data.item.product.sku }}</span>
+    </p>
+    <p>
+      @if (data.item.order.number) { Orden <b class="text-heading">#{{ data.item.order.number }}</b> · }
+      Vale <b class="font-mono text-heading">#{{ data.item.originVoucherCode }}</b> ·
+      Pendientes <b class="text-heading">{{ data.item.pending }}</b>
+    </p>
+    @if (data.item.reason) {
+    <p><span class="text-text-subtle">Motivo de la cancelación:</span> <span class="text-body">{{ data.item.reason }}</span></p>
+    }
+  </div>
+
+  <div>
+    <label for="reject-reason" class="mb-1.5 block text-sm font-medium text-heading">Motivo del rechazo</label>
+    <textarea id="reject-reason" rows="4" [formControl]="reason" [maxLength]="max"
+      placeholder="Ej.: El repuesto ya fue instalado en el equipo y no puede devolverse."
+      class="input-field resize-none text-sm"></textarea>
+    <p class="mt-1 text-right text-[11px] tabular-nums text-text-subtle">{{ text().trim().length }} / {{ max }}</p>
+  </div>
+
+  @if (error()) {
+  <div class="rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-600 dark:text-red-400" role="alert">
+    {{ error() }}
+  </div>
+  }
+
+  <div class="flex items-center justify-end gap-2 pt-1">
+    <button type="button" (click)="close()" [disabled]="saving()"
+      class="cursor-pointer rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-body transition-all hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-60">
+      Cancelar
+    </button>
+    <button type="button" (click)="submit()" [disabled]="saving()"
+      class="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:bg-red-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60">
+      @if (saving()) {
+      <span class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+      }
+      Rechazar solicitud
+    </button>
+  </div>
+</div>

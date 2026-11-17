@@ -1,0 +1,240 @@
+<section class="space-y-5">
+  <div class="flex flex-wrap items-center justify-between gap-3 pb-1">
+    <div>
+      <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-heading">Cancelaciones de repuestos</h2>
+      <p class="text-xs sm:text-sm text-text-subtle mt-0.5">
+        @if (meta(); as m) {
+        <span class="font-semibold text-heading">{{ m.total }}</span>
+        {{ m.total === 1 ? 'solicitud' : 'solicitudes' }}.
+        } @else {
+        Solicitudes de cancelación de repuestos ya entregados.
+        }
+      </p>
+    </div>
+    <button type="button" (click)="reload()"
+      class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-xs font-semibold text-heading shadow-sm transition-all hover:bg-surface-hover">
+      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992V4.356M2.985 19.644v-4.992h4.992m10.5-3.75a7.5 7.5 0 00-12.9-2.25m-1.092 8.598a7.5 7.5 0 0012.9 2.25" />
+      </svg>
+      Actualizar
+    </button>
+  </div>
+
+  @if (notice()) {
+  <div class="flex items-center gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300 shadow-sm" role="status">
+    <svg class="h-5 w-5 shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+    <span>{{ notice() }}</span>
+  </div>
+  }
+
+  @if (error()) {
+  <div class="flex items-start justify-between gap-3 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400 shadow-sm" role="alert">
+    <span>{{ error() }}</span>
+    <button type="button" (click)="dismissError()" class="cursor-pointer rounded-lg p-1 transition-colors hover:bg-red-500/20" aria-label="Cerrar aviso">
+      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+  }
+
+  <!-- Búsqueda, estado y orden -->
+  <div class="rounded-2xl border border-border/70 bg-surface/60 backdrop-blur-md p-3.5 sm:p-4 shadow-sm space-y-3">
+    <div class="flex flex-wrap items-center gap-2.5">
+      <div class="relative w-full sm:w-80 flex-shrink-0">
+        <span class="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-text-subtle">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+          </svg>
+        </span>
+        <input type="text" [formControl]="search" autocomplete="off" maxlength="100"
+          placeholder="Producto, SKU, cliente, equipo, nº de orden o vale" aria-label="Buscar solicitudes"
+          class="input-field pl-10 pr-10 text-xs py-2 shadow-none focus:ring-2 focus:ring-primary/20" />
+        @if (searchText()) {
+        <button type="button" (click)="clearSearch()"
+          class="absolute inset-y-0 right-3 flex cursor-pointer items-center text-text-subtle transition hover:text-heading" aria-label="Borrar búsqueda">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        }
+      </div>
+
+      <div class="w-[calc(50%-0.3125rem)] sm:w-44 flex-shrink-0">
+        <select class="input-field text-xs py-2" (change)="setStatus($any($event.target).value)" aria-label="Filtrar por estado">
+          @for (s of statusOptions(); track s.value) {
+          <option [value]="s.value" [selected]="s.value === query().status">{{ s.label }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="flex w-[calc(50%-0.3125rem)] sm:w-56 flex-shrink-0 gap-1.5">
+        <select class="input-field text-xs py-2 flex-1" (change)="setSortBy($any($event.target).value)" aria-label="Ordenar por">
+          @for (o of sortOptions(); track o.value) {
+          <option [value]="o.value" [selected]="o.value === query().sortBy">{{ o.label }}</option>
+          }
+        </select>
+        <button type="button" (click)="toggleDir()"
+          class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-border bg-surface text-xs font-semibold text-body transition-all hover:bg-surface-hover hover:text-heading shadow-sm"
+          [attr.aria-label]="query().sortDir === 'ASC' ? 'Orden ascendente' : 'Orden descendente'"
+          [attr.title]="query().sortDir === 'ASC' ? 'Ascendente' : 'Descendente'">
+          {{ query().sortDir === 'ASC' ? '↑' : '↓' }}
+        </button>
+      </div>
+
+      @if (hasActive()) {
+      <button type="button" (click)="clear()"
+        class="inline-flex cursor-pointer items-center gap-1.5 px-3 py-2 text-xs font-semibold text-primary rounded-xl border border-primary/20 hover:bg-primary/10 transition-colors ml-auto">
+        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+        Limpiar filtros
+      </button>
+      }
+    </div>
+  </div>
+
+  <!-- Listado -->
+  @if (!meta()) {
+  @if (loading()) {
+  <div class="rounded-2xl border border-border/70 bg-surface/30 p-12 text-center text-body">
+    <div class="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent mb-2"></div>
+    <p class="text-sm">Cargando solicitudes...</p>
+  </div>
+  }
+  } @else {
+  @if (items().length === 0) {
+  <div class="rounded-2xl border border-border/70 bg-surface/30 px-6 py-14 text-center">
+    <p class="font-semibold text-heading">{{ hasActive() ? 'Sin resultados' : 'No hay solicitudes pendientes' }}</p>
+    <p class="mt-1 text-xs text-text-subtle max-w-sm mx-auto">
+      {{ hasActive() ? 'No encontramos coincidencias con los filtros aplicados.' : 'Cuando pidan cancelar un repuesto aparecerá aquí.' }}
+    </p>
+    @if (hasActive()) {
+    <button type="button" (click)="clear()" class="mt-4 cursor-pointer text-xs font-semibold text-primary hover:underline">
+      Limpiar filtros de búsqueda
+    </button>
+    }
+  </div>
+  } @else {
+  <div class="flex flex-col gap-2 transition-opacity" [class.opacity-60]="loading()">
+    @for (c of items(); track c.id) {
+    <article class="rounded-2xl border border-border/70 bg-surface/50 p-4 transition-all hover:bg-surface/80 hover:shadow-md">
+      <div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+        <div class="min-w-0 flex-1 space-y-1.5">
+
+          <!-- Producto, estado y fecha -->
+          <div class="flex flex-wrap items-center gap-2.5">
+            <span class="font-bold text-heading text-sm">{{ c.product.name }}</span>
+            <span class="font-mono text-xs text-text-subtle">{{ c.product.sku }}</span>
+            <span class="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
+              [class]="statusClass(c.status)">{{ statusLabel(c.status) }}</span>
+            <span class="text-xs text-text-subtle">{{ c.createdAt | date:'dd/MM/yyyy HH:mm':'-0500' }}</span>
+            @if (c.confirmedAt) {
+            <span class="text-xs text-text-subtle">· Confirmada {{ c.confirmedAt | date:'dd/MM/yyyy HH:mm':'-0500' }}</span>
+            }
+          </div>
+
+          <!-- Orden -->
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-subtle">
+            @if (c.order.number) {
+            <span class="rounded-md bg-primary/10 px-2 py-0.5 font-medium text-primary">Orden #{{ c.order.number }}</span>
+            } @else {
+            <span>Orden sin número</span>
+            }
+            @if (c.order.statusName) {
+            <span class="rounded-md bg-surface-hover px-2 py-0.5 text-[10px] font-semibold text-body">{{ c.order.statusName }}</span>
+            } @else {
+            <span>Orden aún no sincronizada</span>
+            }
+            @if (c.order.customerName) {
+            <span class="truncate">{{ c.order.customerName }}</span>
+            }
+            @if (c.order.device) {
+            <span class="truncate">{{ c.order.device }}</span>
+            }
+          </div>
+
+          <!-- Vale, lote y cantidades -->
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-subtle">
+            <span>Vale <b class="font-mono text-heading">#{{ c.originVoucherCode }}</b> · línea {{ c.lineNo }}</span>
+            <span>Lote <b class="font-mono text-heading">#{{ c.lot.code }}</b></span>
+            <span class="tabular-nums">
+              Sacadas <b class="text-heading">{{ c.quantity }}</b> ·
+              Devueltas <b class="text-heading">{{ c.returned }}</b> ·
+              Pendientes <b class="text-heading">{{ c.pending }}</b>
+            </span>
+            @if (c.status === 'PENDING' && c.pending === 0) {
+            <span class="rounded-md bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold text-sky-700 dark:text-sky-300">Por cerrarse</span>
+            }
+          </div>
+
+          <!-- Motivo y error -->
+          @if (c.reason) {
+          <p class="text-xs text-body"><span class="text-text-subtle">Motivo:</span> {{ c.reason }}</p>
+          }
+          @if (c.status === 'REJECTED' && c.errorDetail) {
+          <p class="text-xs text-red-600 dark:text-red-400"><span class="font-semibold">No procede:</span> {{ c.errorDetail }}</p>
+          }
+        </div>
+
+        <!-- Acciones -->
+        @if (c.status === 'PENDING') {
+        <div class="flex shrink-0 items-center gap-2">
+          <button type="button" (click)="openApprove(c)" [disabled]="!canApprove(c)" [attr.title]="approveHint(c)"
+  class="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-3 text-xs font-semibold text-primary shadow-sm transition-all hover:bg-primary/20 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50">
+  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+  </svg>
+  Aceptar
+</button>
+          <button type="button" (click)="openReject(c)"
+            class="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 px-3 text-xs font-semibold text-red-600 shadow-sm transition-all hover:bg-red-500/20 active:scale-[0.97] dark:text-red-400"
+            title="Rechazar la solicitud de cancelación">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Rechazar
+          </button>
+        </div>
+        }
+      </div>
+    </article>
+    }
+  </div>
+  }
+  }
+
+  <!-- Paginación -->
+  @if (meta(); as m) {
+  <div class="rounded-2xl border border-border/70 bg-surface/50 px-4 py-3 text-xs text-body flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+    <p class="text-text-subtle text-center sm:text-left">
+      Mostrando del <span class="font-semibold text-heading">{{ from() }}</span> al
+      <span class="font-semibold text-heading">{{ to() }}</span> de
+      <span class="font-semibold text-heading">{{ m.total }}</span> resultados
+    </p>
+    <div class="flex flex-wrap items-center justify-center gap-3.5">
+      <label class="flex items-center gap-2 text-text-subtle">
+        Filas
+        <select class="input-field w-auto py-1 px-2 text-xs" (change)="setLimit($any($event.target).value)" aria-label="Filas por página">
+          @for (l of limits; track l) {
+          <option [value]="l" [selected]="l === m.limit">{{ l }}</option>
+          }
+        </select>
+      </label>
+      <div class="flex items-center gap-1">
+        <button type="button" (click)="goTo(1)" [disabled]="m.page <= 1"
+          class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-border transition-all hover:bg-surface-hover hover:text-heading disabled:cursor-not-allowed disabled:opacity-30" aria-label="Primera página">«</button>
+        <button type="button" (click)="goTo(m.page - 1)" [disabled]="m.page <= 1"
+          class="cursor-pointer rounded-lg border border-border px-2.5 h-8 text-xs font-medium transition-all hover:bg-surface-hover hover:text-heading disabled:cursor-not-allowed disabled:opacity-30">Ant.</button>
+        <span class="px-1.5 text-text-subtle font-medium">Pág. {{ m.page }} / {{ m.totalPages || 1 }}</span>
+        <button type="button" (click)="goTo(m.page + 1)" [disabled]="m.page >= m.totalPages"
+          class="cursor-pointer rounded-lg border border-border px-2.5 h-8 text-xs font-medium transition-all hover:bg-surface-hover hover:text-heading disabled:cursor-not-allowed disabled:opacity-30">Sig.</button>
+        <button type="button" (click)="goTo(m.totalPages)" [disabled]="m.page >= m.totalPages"
+          class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-border transition-all hover:bg-surface-hover hover:text-heading disabled:cursor-not-allowed disabled:opacity-30" aria-label="Última página">»</button>
+      </div>
+    </div>
+  </div>
+  }
+</section>
