@@ -1,0 +1,19 @@
+<div class="surface-card w-full space-y-3 rounded-2xl p-4">
+  <h2 class="text-base font-semibold text-heading">Escanear QR</h2>
+
+  <video #video class="w-full rounded-xl bg-black" playsinline muted></video>
+
+  @if (error()) {
+    <p class="text-sm text-red-700 dark:text-red-300">{{ error() }}</p>
+  }
+  @if (hint()) {
+    <p class="text-sm text-amber-700 dark:text-amber-300">{{ hint() }}</p>
+  }
+
+  <div class="flex justify-end">
+    <button type="button" (click)="close()"
+      class="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-text hover:bg-surface-hover">
+      Cancelar
+    </button>
+  </div>
+</div>

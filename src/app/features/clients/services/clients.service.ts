@@ -38,4 +38,14 @@ export class ClientsService {
     if (p.active && p.active !== 'all') params = params.set('active', p.active);
     return this.http.get<BillingListResponse>(`${this.base}/list`, { params });
   }
+
+  /** Búsqueda libre (cédula, RUC, nombre, razón social, correo). Solo activos. */
+  searchByText(q: string) {
+    const params = new HttpParams()
+      .set('q', q)
+      .set('active', 'true')
+      .set('page', 1)
+      .set('limit', 10);
+    return this.http.get<BillingListResponse>(`${this.base}/list`, { params });
+  }
 }

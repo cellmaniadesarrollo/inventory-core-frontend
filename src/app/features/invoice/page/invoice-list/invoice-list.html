@@ -1,0 +1,71 @@
+<section class="space-y-5">
+  <header class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-xl text-heading">Documentos</h1>
+      <p class="text-sm text-body">{{ items().length }} documento(s)</p>
+    </div>
+    <a routerLink="nueva" class="btn-primary">Nueva venta</a>
+  </header>
+
+  @if (error()) {
+    <div class="flex items-center justify-between gap-3 rounded-xl border border-red-300/60 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-300">
+      <span>{{ error() }}</span>
+      <button type="button" (click)="reload()" class="font-semibold underline">Reintentar</button>
+    </div>
+  }
+
+  @if (!loading() && all().length > 0) {
+    <div class="flex flex-wrap gap-2">
+      @for (c of chips(); track c.key) {
+        <button
+          type="button"
+          (click)="filter.set(c.key)"
+          class="rounded-full border px-3 py-1 text-xs font-semibold"
+          [class]="filter() === c.key ? 'border-transparent bg-primary text-white' : 'border-border text-body hover:bg-surface-hover'"
+        >
+          {{ c.label }} · {{ c.count }}
+        </button>
+      }
+    </div>
+  }
+
+  @if (loading()) {
+    <p class="text-sm text-body">Cargando documentos...</p>
+  } @else {
+    <div class="space-y-3">
+      @for (d of items(); track d.kind + d.id) {
+        <article class="surface-card p-4">
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold" [class]="kindClass(d)">
+                  {{ kindLabel(d) }}
+                </span>
+                <h2 class="text-base font-semibold text-text">{{ d.number }}</h2>
+              </div>
+              <p class="mt-0.5 truncate text-sm text-body">
+                {{ d.buyerName }}@if (d.buyerIdNumber) { · {{ d.buyerIdNumber }} }
+              </p>
+              <p class="text-xs text-text-subtle">Emitido el {{ date(d.issueDate) }}</p>
+            </div>
+            <div class="text-right">
+              <p class="text-base font-semibold text-text">{{ d.total }}</p>
+              <span class="mt-1 inline-block rounded-full px-2.5 py-1 text-xs font-semibold" [class]="statusClass(d)">
+                {{ statusLabel(d) }}
+              </span>
+            </div>
+          </div>
+          @if (d.errorMessage) {
+            <p class="mt-2 text-xs text-red-700 dark:text-red-300">{{ d.errorMessage }}</p>
+          }
+        </article>
+      } @empty {
+        @if (!error()) {
+          <div class="surface-card p-8 text-center">
+            <p class="text-sm text-body">Aún no hay documentos.</p>
+          </div>
+        }
+      }
+    </div>
+  }
+</section>

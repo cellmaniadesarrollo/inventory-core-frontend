@@ -1,0 +1,44 @@
+<form [formGroup]="form" (ngSubmit)="save()" class="surface-card w-[min(92vw,26rem)] space-y-4 p-5">
+  <div>
+    <h2 class="text-base font-semibold text-text">Nuevo descuento</h2>
+    <p class="text-xs text-text-subtle">Vence automáticamente 24 horas después de crearse.</p>
+  </div>
+
+  @if (error()) {
+    <div class="rounded-xl border border-red-300/60 bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-300">{{ error() }}</div>
+  }
+
+  <div>
+    <label for="d-name" class="mb-1 block text-xs font-medium text-text-subtle">Nombre</label>
+    <input id="d-name" formControlName="name" maxlength="80" autocomplete="off" class="input-field w-full" placeholder="Ej. Promo fin de mes" />
+  </div>
+
+  <div class="grid grid-cols-2 gap-3">
+    <div>
+      <label for="d-type" class="mb-1 block text-xs font-medium text-text-subtle">Tipo</label>
+      <select id="d-type" formControlName="type" class="input-field w-full">
+        <option value="NORMAL">Normal</option>
+        <option value="CREDITO">Crédito</option>
+      </select>
+    </div>
+    <div>
+    <label for="d-kind" class="mb-1 block text-xs font-medium text-text-subtle">Se aplica como</label>
+    <select id="d-kind" formControlName="valueKind" class="input-field w-full">
+        <option value="AMOUNT">Monto ($)</option>
+        <option value="PERCENT">Porcentaje (%)</option>
+    </select>
+    </div>
+  </div>
+
+  <div>
+    <label for="d-value" class="mb-1 block text-xs font-medium text-text-subtle">
+      {{ form.controls.valueKind.value === 'PERCENT' ? 'Porcentaje' : 'Monto (con IVA)' }}
+    </label>
+    <input id="d-value" type="number" step="0.01" min="0.01" formControlName="value" class="input-field w-full" />
+  </div>
+
+  <div class="flex justify-end gap-2">
+    <button type="button" (click)="ref.close()" class="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-text hover:bg-surface-hover">Cancelar</button>
+    <button type="submit" class="btn-primary" [disabled]="saving()">{{ saving() ? 'Creando...' : 'Crear' }}</button>
+  </div>
+</form>

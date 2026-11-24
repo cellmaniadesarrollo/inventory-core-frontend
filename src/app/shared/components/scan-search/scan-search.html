@@ -1,0 +1,8 @@
+<div class="flex gap-2">
+  <input class="input-field" [placeholder]="placeholder()" [attr.aria-label]="placeholder()"
+    [ngModel]="term()" (ngModelChange)="term.set($event)" (keydown.enter)="submit()" />
+  <button type="button" (click)="openScanner()" aria-label="Escanear QR"
+    class="rounded-xl border border-border px-3 text-sm font-semibold text-text hover:bg-surface-hover">
+    QR
+  </button>
+</div>
