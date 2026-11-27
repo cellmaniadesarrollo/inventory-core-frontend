@@ -1,6 +1,9 @@
-export type InvoiceStatus = 'BORRADOR' | 'FIRMADO' | 'RECIBIDO' | 'PPR' | 'AUT' | 'NAT';
+export type InvoiceStatus = 'BORRADOR' | 'FIRMADO' | 'RECIBIDO' | 'PPR' | 'AUT' | 'NAT' | 'DEVUELTO';
 
 export interface InvoiceLineRequest {
+  productId?: string;     // producto de inventario (vacío en línea manual)
+  lotId?: string;
+  unitId?: string;
   mainCode: string;
   description: string;
   quantity: number;
@@ -19,6 +22,7 @@ export interface InvoicePaymentRequest {
 export interface CreateInvoiceRequest {
   clientRequestId: string;
   branchId: string;
+  emissionPointId?: string; // opcional: si no se envía, el backend usa el punto por defecto
   issueDate: string;      // YYYY-MM-DD
   orderId?: string;
   buyerIdTypeCode: '04' | '05' | '06' | '07' | '08';

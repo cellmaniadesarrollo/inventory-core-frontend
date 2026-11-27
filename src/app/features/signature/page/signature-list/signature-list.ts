@@ -3,6 +3,7 @@ import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { EMPTY, catchError, switchMap, tap } from 'rxjs';
+import { EmissionPointsDialog } from '../../components/emission-points-dialog/emission-points-dialog';
 import { SignatureBranchesDialog } from '../../components/signature-branches-dialog/signature-branches-dialog';
 import { SignatureIssuerDialog } from '../../components/signature-issuer-dialog/signature-issuer-dialog';
 import { SignatureUploadDialog } from '../../components/signature-upload-dialog/signature-upload-dialog';
@@ -152,5 +153,19 @@ export class SignatureList {
         this.showFlash(`Emisor de ${updated.subject} actualizado.`);
         this.reload();
       });
+  }
+
+  openEmissionPoints(b: { id: string; name: string; establishmentCode?: string | null }) {
+    this.dialog.open(EmissionPointsDialog, {
+      width: '36rem',
+      maxWidth: '95vw',
+      autoFocus: 'first-tabbable',
+      disableClose: true,
+      data: {
+        branchId: b.id,
+        branchName: b.name,
+        establishmentCode: b.establishmentCode ?? null,
+      },
+    });
   }
 }

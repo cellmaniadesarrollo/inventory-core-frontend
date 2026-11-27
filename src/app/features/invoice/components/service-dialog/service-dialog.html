@@ -1,0 +1,50 @@
+<form [formGroup]="form" (ngSubmit)="save()" class="surface-card max-h-[90vh] w-[min(92vw,30rem)] space-y-4 overflow-y-auto p-5">
+  <div class="flex items-center justify-between">
+    <h2 class="text-base font-semibold text-text">{{ data.service ? 'Editar servicio' : 'Nuevo servicio' }}</h2>
+    @if (data.service) {
+      <span class="text-xs text-text-subtle">Código: {{ data.service.code }}</span>
+    }
+  </div>
+
+  @if (error()) {
+    <div class="rounded-xl border border-red-300/60 bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-300">{{ error() }}</div>
+  }
+
+  <div>
+    <label for="s-type" class="mb-1 block text-xs font-medium text-text-subtle">Tipo</label>
+    <select id="s-type" formControlName="serviceTypeId" class="input-field w-full">
+      <option value="">Selecciona un tipo</option>
+      @for (t of types(); track t.id) {
+        <option [value]="t.id">{{ t.name }}</option>
+      }
+    </select>
+    @if (canCreateType) {
+      <div class="mt-2 flex gap-2">
+        <input #newType maxlength="120" aria-label="Nuevo tipo" placeholder="Nuevo tipo" class="input-field min-w-0 flex-1"
+          (keydown.enter)="$event.preventDefault(); addType(newType)" />
+        <button type="button" (click)="addType(newType)" class="text-xs font-semibold text-primary hover:underline">+ Agregar</button>
+      </div>
+    }
+  </div>
+
+  <div>
+    <label for="s-name" class="mb-1 block text-xs font-medium text-text-subtle">Nombre</label>
+    <input id="s-name" formControlName="name" maxlength="160" autocomplete="off" class="input-field w-full" />
+  </div>
+
+  <div>
+    <label for="s-price" class="mb-1 block text-xs font-medium text-text-subtle">Precio (con IVA 15%)</label>
+    <input id="s-price" type="number" step="0.01" min="0.01" formControlName="price" class="input-field w-full" />
+    <p class="mt-1 text-xs text-text-subtle">Subtotal sin IVA que se guarda: {{ subtotal().toFixed(6) }}</p>
+  </div>
+
+  <div>
+    <label for="s-desc" class="mb-1 block text-xs font-medium text-text-subtle">Descripción</label>
+    <textarea id="s-desc" formControlName="description" maxlength="500" rows="2" class="input-field w-full"></textarea>
+  </div>
+
+  <div class="flex justify-end gap-2">
+    <button type="button" (click)="cancel()" class="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-text hover:bg-surface-hover">Cancelar</button>
+    <button type="submit" class="btn-primary" [disabled]="saving()">{{ saving() ? 'Guardando...' : 'Guardar' }}</button>
+  </div>
+</form>

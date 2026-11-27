@@ -1,0 +1,35 @@
+<div class="surface-card flex max-h-[85vh] w-[min(92vw,32rem)] flex-col gap-3 p-5">
+  <div class="flex items-center justify-between gap-3">
+    <h2 class="text-base font-semibold text-text">Servicios</h2>
+    <button type="button" (click)="create()" [disabled]="loading()" class="btn-primary">+ Nuevo</button>
+  </div>
+
+  @if (error()) {
+    <div class="rounded-xl border border-red-300/60 bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-300">{{ error() }}</div>
+  }
+
+  <input #q type="search" autocomplete="off" aria-label="Buscar servicio" placeholder="Buscar por código o nombre"
+    class="input-field w-full" (input)="term.set(q.value)" />
+
+  <ul class="min-h-0 flex-1 divide-y divide-border overflow-y-auto">
+    @for (s of filtered(); track s.id) {
+      <li>
+        <button type="button" (click)="ref.close(s)" class="flex w-full items-center justify-between gap-3 px-2 py-2 text-left hover:bg-surface-hover">
+          <span class="min-w-0">
+            <span class="block text-sm font-semibold text-text">{{ s.code }} · {{ s.name }}</span>
+            @if (s.description) {
+              <span class="block truncate text-xs text-text-subtle">{{ s.description }}</span>
+            }
+          </span>
+          <span class="text-sm text-body">${{ priceWithVat(s.subtotal) }}</span>
+        </button>
+      </li>
+    } @empty {
+      <li class="py-4 text-center text-sm text-body">{{ loading() ? 'Cargando...' : 'Sin servicios.' }}</li>
+    }
+  </ul>
+
+  <div class="flex justify-end">
+    <button type="button" (click)="ref.close()" class="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-text hover:bg-surface-hover">Cerrar</button>
+  </div>
+</div>

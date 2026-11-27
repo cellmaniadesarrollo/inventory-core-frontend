@@ -2,7 +2,7 @@
   <header class="flex flex-wrap items-center justify-between gap-3">
     <div>
       <h1 class="text-xl text-heading">Nueva venta</h1>
-      <p class="text-sm text-body">Los productos facturables van a la factura SRI; el resto, a un recibo.</p>
+      <p class="text-sm text-body">Los productos y servicios facturables van a la factura SRI; el resto, a un recibo.</p>
     </div>
     <a routerLink="/facturas" class="text-sm font-semibold text-primary hover:underline">Volver</a>
   </header>
@@ -74,7 +74,7 @@
         }
       }
 
-      <p class="text-xs text-text-subtle">El comprador es obligatorio solo si hay productos facturables. La fecha de emisión es la del momento en que se guarda.</p>
+      <p class="text-xs text-text-subtle">El comprador es obligatorio solo si hay productos o servicios facturables. La fecha de emisión es la del momento en que se guarda.</p>
     </div>
 
     <!-- Detalle -->
@@ -82,8 +82,9 @@
 
       <div class="flex items-center justify-between">
         <h2 class="text-base font-semibold text-text">Detalle</h2>
-        <div class="flex items-center gap-3">
+        <div class="flex flex-wrap items-center gap-3">
           <button type="button" (click)="newDiscount()" class="text-xs font-semibold text-primary hover:underline">+ Nuevo descuento</button>
+          <button type="button" (click)="openServices()" class="text-xs font-semibold text-primary hover:underline">+ Servicio</button>
           <button type="button" (click)="addManualLine()" class="text-xs font-semibold text-primary hover:underline">+ Línea manual</button>
         </div>
       </div>
@@ -111,23 +112,36 @@
         </ul>
       }
 
-      <p class="text-xs text-text-subtle">El precio unitario va SIN IVA. En productos del sistema solo se pueden editar la cantidad y el descuento.</p>
+      <p class="text-xs text-text-subtle">El precio unitario va SIN IVA. En productos del sistema solo se pueden editar la cantidad y el descuento. En servicios y líneas manuales eliges si van a factura o a recibo.</p>
 
       @if (lines.length === 0) {
-        <p class="rounded-xl border border-dashed border-border p-4 text-center text-sm text-body">Escanea un QR o busca un producto para empezar.</p>
+        <p class="rounded-xl border border-dashed border-border p-4 text-center text-sm text-body">Escanea un QR, busca un producto o agrega un servicio.</p>
       }
 
       <div formArrayName="lines" class="space-y-3">
         @for (l of lines.controls; track l; let i = $index) {
           <article [formGroupName]="i" class="space-y-3 rounded-xl border border-border p-3">
-            <!-- Cabecera: tipo, origen y acciones -->
+            <!-- Cabecera: tipo de documento, origen y acciones -->
             <div class="flex flex-wrap items-start justify-between gap-2">
               <div class="flex flex-wrap items-center gap-2">
-                <span class="rounded-full border border-border px-2 py-0.5 text-xs font-semibold"
-                  [class.text-primary]="l.value.billable" [class.text-body]="!l.value.billable">
-                  {{ l.value.billable ? 'Factura' : 'Recibo' }}
-                </span>
-                @if (l.value.locked) {
+                @if (l.value.locked && !l.value.serviceId) {
+                  <!-- Producto del sistema: lo define el lote, no se cambia -->
+                  <span class="rounded-full border border-border px-2 py-0.5 text-xs font-semibold"
+                    [class.text-primary]="l.value.billable" [class.text-body]="!l.value.billable">
+                    {{ l.value.billable ? 'Factura' : 'Recibo' }}
+                  </span>
+                } @else {
+                  <!-- Servicio o línea manual: el usuario elige -->
+                  <select formControlName="billable" aria-label="Tipo de documento"
+                    class="input-field !w-auto !py-1 text-xs font-semibold">
+                    <option [ngValue]="true">Factura</option>
+                    <option [ngValue]="false">Recibo</option>
+                  </select>
+                }
+
+                @if (l.value.serviceId) {
+                  <span class="text-xs text-text-subtle">Servicio</span>
+                } @else if (l.value.locked) {
                   <span class="text-xs text-text-subtle">Producto del sistema · lote {{ l.value.batch }}</span>
                 } @else {
                   <span class="text-xs text-text-subtle">Línea manual</span>
@@ -172,11 +186,7 @@
               </div>
               <div class="sm:col-span-2">
                 <label class="mb-1 block text-xs font-medium text-text-subtle">IVA</label>
-                @if (l.value.billable) {
-                  <p class="py-2 text-sm text-text">15%</p>
-                } @else {
-                  <p class="py-2 text-sm text-text-subtle">Sin IVA</p>
-                }
+                <p class="py-2 text-sm text-text">15%</p>
               </div>
               <div class="col-span-2 sm:col-span-2 sm:text-right">
                 <span class="mb-1 block text-xs font-medium text-text-subtle">Subtotal</span>
@@ -198,6 +208,19 @@
           }
         </select>
         <p class="mt-1.5 text-xs text-text-subtle">Se registra un solo pago por el total de cada documento.</p>
+
+        @if (emissionPoints().length > 1) {
+          <label for="f-ep" class="mb-1.5 mt-3 block text-sm font-medium text-heading">Punto de emisión</label>
+          <select id="f-ep" class="input-field" (change)="emissionPointId.set($any($event.target).value)">
+            @for (p of emissionPoints(); track p.id) {
+              <option [value]="p.id" [selected]="p.id === emissionPointId()">{{ p.code }} · {{ p.name }}</option>
+            }
+          </select>
+        } @else if (selectedPoint(); as p) {
+          <p class="mt-3 text-sm text-body">
+            Punto de emisión: <span class="font-medium text-text">{{ p.code }} · {{ p.name }}</span>
+          </p>
+        }
       </div>
 
       <div class="space-y-4 text-sm">
@@ -213,6 +236,9 @@
         @if (preview().receipt.count > 0) {
           <dl class="space-y-1">
             <dt class="font-semibold text-heading">Recibo ({{ preview().receipt.count }})</dt>
+            <div class="flex justify-between"><dt class="text-body">Subtotal</dt><dd class="text-text">{{ preview().receipt.subtotal }}</dd></div>
+            <div class="flex justify-between"><dt class="text-body">Descuento</dt><dd class="text-text">{{ preview().receipt.discount }}</dd></div>
+            <div class="flex justify-between"><dt class="text-body">IVA</dt><dd class="text-text">{{ preview().receipt.vat }}</dd></div>
             <div class="flex justify-between border-t border-border pt-1 font-semibold"><dt class="text-heading">Total</dt><dd class="text-text">{{ preview().receipt.total }}</dd></div>
           </dl>
         }

@@ -1,10 +1,11 @@
 import { RouterLink } from '@angular/router';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { catchError, forkJoin, of, switchMap, tap } from 'rxjs';
 import { InvoicesService } from '../../services/invoice.service';
 import { SalesService } from '../../services/sales.service';
 import { InvoiceStatus } from '../../types/invoice.type';
+import { RealtimeService } from '../../../../core/services/realtime.service';
 
 type DocKind = 'FACTURA' | 'RECIBO' | 'NOTA_CREDITO' | 'NOTA_DEBITO' | 'RETORNO';
 
@@ -47,6 +48,7 @@ const STATUS_LABEL: Record<InvoiceStatus, string> = {
   PPR: 'En proceso',
   AUT: 'Autorizada',
   NAT: 'No autorizada',
+  DEVUELTO: 'Devuelta',
 };
 
 const STATUS_CLASS: Record<InvoiceStatus, string> = {
@@ -56,6 +58,7 @@ const STATUS_CLASS: Record<InvoiceStatus, string> = {
   PPR: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
   AUT: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
   NAT: 'bg-red-500/10 text-red-700 dark:text-red-300',
+  DEVUELTO: 'bg-red-500/10 text-red-700 dark:text-red-300',
 };
 
 /** Estados propios de los recibos. */
@@ -67,6 +70,33 @@ const RECEIPT_STATUS_CLASS: Record<string, string> = {
 
 const isReceipt = (k: DocKind) => k === 'RECIBO' || k === 'RETORNO';
 
+/** Mismo mapeo para la carga HTTP y para el evento en vivo. */
+const toInvoiceItem = (d: any): DocItem => ({
+  id: d.id,
+  kind: SRI_KIND[d.documentTypeCode] ?? 'FACTURA',
+  number: `${d.series.slice(0, 3)}-${d.series.slice(3)}-${d.sequence}`,
+  buyerName: d.buyerName,
+  buyerIdNumber: d.buyerIdNumber ?? '',
+  issueDate: d.issueDate,
+  createdAt: String(d.createdAt),
+  total: d.total,
+  statusCode: d.statusCode,
+  errorMessage: d.lastErrorMessage ?? null,
+});
+
+const toReceiptItem = (d: any): DocItem => ({
+  id: d.id,
+  kind: d.kind === 'RETORNO' ? 'RETORNO' : 'RECIBO',
+  number: d.number,
+  buyerName: d.buyerName,
+  buyerIdNumber: d.buyerIdNumber ?? '',
+  issueDate: d.issueDate,
+  createdAt: String(d.createdAt),
+  total: d.total,
+  statusCode: d.statusCode,
+  errorMessage: null,
+});
+
 @Component({
   selector: 'app-invoice-list',
   imports: [RouterLink],
@@ -76,12 +106,14 @@ const isReceipt = (k: DocKind) => k === 'RECIBO' || k === 'RETORNO';
 export class InvoiceList {
   private readonly api = inject(InvoicesService);
   private readonly sales = inject(SalesService);
+  private readonly realtime = inject(RealtimeService);
 
   readonly all = signal<DocItem[]>([]);
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly filter = signal<DocKind | 'ALL'>('ALL');
   private readonly reloadTick = signal(0);
+  private wasConnected = false;
 
   readonly items = computed(() => {
     const f = this.filter();
@@ -116,37 +148,40 @@ export class InvoiceList {
         takeUntilDestroyed(),
       )
       .subscribe(([inv, rec]) => {
-        const fromInvoices: DocItem[] = (inv.items ?? []).map((d: any) => ({
-          id: d.id,
-          kind: SRI_KIND[d.documentTypeCode] ?? 'FACTURA',
-          number: `${d.series.slice(0, 3)}-${d.series.slice(3)}-${d.sequence}`,
-          buyerName: d.buyerName,
-          buyerIdNumber: d.buyerIdNumber ?? '',
-          issueDate: d.issueDate,
-          createdAt: String(d.createdAt),
-          total: d.total,
-          statusCode: d.statusCode,
-          errorMessage: d.lastErrorMessage ?? null,
-        }));
-
-        const fromReceipts: DocItem[] = (rec.items ?? []).map((d: any) => ({
-          id: d.id,
-          kind: d.kind === 'RETORNO' ? 'RETORNO' : 'RECIBO',
-          number: d.number,
-          buyerName: d.buyerName,
-          buyerIdNumber: d.buyerIdNumber ?? '',
-          issueDate: d.issueDate,
-          createdAt: String(d.createdAt),
-          total: d.total,
-          statusCode: d.statusCode,
-          errorMessage: null,
-        }));
-
+        const fromInvoices = (inv.items ?? []).map(toInvoiceItem);
+        const fromReceipts = (rec.items ?? []).map(toReceiptItem);
         this.all.set(
           [...fromInvoices, ...fromReceipts].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
         );
         this.loading.set(false);
       });
+
+    // ── Tiempo real ──
+    this.realtime
+      .on<any>('invoice.updated')
+      .pipe(takeUntilDestroyed())
+      .subscribe((d) => this.upsert(toInvoiceItem(d)));
+
+    this.realtime
+      .on<any>('receipt.updated')
+      .pipe(takeUntilDestroyed())
+      .subscribe((d) => this.upsert(toReceiptItem(d)));
+
+    // Al reconectar, recarga para recuperar lo que pasó mientras estuvo caído.
+    effect(() => {
+      const up = this.realtime.connected();
+      if (up && this.wasConnected) untracked(() => this.reload());
+      if (up) this.wasConnected = true;
+    });
+  }
+
+  /** Reemplaza la fila si existe (mismo kind + id) o la agrega arriba. */
+  private upsert(item: DocItem) {
+    this.all.update((list) => {
+      const i = list.findIndex((x) => x.kind === item.kind && x.id === item.id);
+      const next = i >= 0 ? list.map((x, j) => (j === i ? item : x)) : [...list, item];
+      return next.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    });
   }
 
   private setError(failed: number) {

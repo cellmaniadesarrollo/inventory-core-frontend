@@ -1,0 +1,50 @@
+<section class="space-y-5">
+  <header class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-xl text-heading">Catálogo de servicios</h1>
+    <div class="flex items-center gap-3">
+      <a routerLink="/facturas" class="text-sm font-semibold text-primary hover:underline">Volver</a>
+      <button type="button" (click)="open()" class="btn-primary">+ Nuevo servicio</button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <div class="rounded-xl border border-red-300/60 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-300">{{ error() }}</div>
+  }
+
+  <div class="surface-card space-y-3 p-4">
+    <div class="flex flex-wrap gap-2">
+      <input #q type="search" aria-label="Buscar servicio" placeholder="Buscar y presionar Enter" class="input-field min-w-0 flex-1"
+        (keydown.enter)="search(q.value)" />
+      <select #t aria-label="Filtrar por tipo" class="input-field" (change)="filterType(t.value)">
+        <option value="">Todos los tipos</option>
+        @for (type of types(); track type.id) {
+          <option [value]="type.id">{{ type.name }}</option>
+        }
+      </select>
+    </div>
+
+    @if (loading()) {
+      <p class="text-sm text-text-subtle">Cargando...</p>
+    }
+
+    <ul class="divide-y divide-border">
+      @for (s of services(); track s.id) {
+        <li class="flex flex-wrap items-center justify-between gap-3 py-3" [class.opacity-60]="!s.isActive">
+          <div class="min-w-0">
+            <p class="text-sm font-semibold text-text">{{ s.code }} · {{ s.name }}</p>
+            <p class="text-xs text-text-subtle">{{ typeName(s.serviceTypeId) }} · {{ s.isActive ? 'Activo' : 'Inactivo' }}</p>
+          </div>
+          <div class="flex items-center gap-4">
+            <span class="text-sm text-body">${{ s.subtotal }}</span>
+            <button type="button" (click)="open(s)" class="text-xs font-semibold text-primary hover:underline">Editar</button>
+            <button type="button" (click)="toggle(s)" class="text-xs font-semibold text-primary hover:underline">{{ s.isActive ? 'Desactivar' : 'Activar' }}</button>
+          </div>
+        </li>
+      } @empty {
+        @if (!loading()) {
+          <li class="py-4 text-center text-sm text-body">No hay servicios.</li>
+        }
+      }
+    </ul>
+  </div>
+</section>

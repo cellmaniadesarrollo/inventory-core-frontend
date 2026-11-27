@@ -1,0 +1,90 @@
+<div class="surface-card p-5 w-[36rem] max-w-full">
+  <h2 class="text-lg font-semibold">Puntos de emisión</h2>
+  <p class="text-sm opacity-70 mb-4">
+    {{ data.branchName }} · Establecimiento {{ data.establishmentCode ?? '—' }}
+  </p>
+
+  @if (loadError()) {
+    <p class="text-sm text-red-600 mb-3">{{ loadError() }}</p>
+  } @else if (loading()) {
+    <p class="text-sm opacity-70 mb-3">Cargando…</p>
+  } @else if (items().length === 0) {
+    <p class="text-sm opacity-70 mb-3">
+      Aún no hay puntos. Se creará el 001 automáticamente con la primera factura.
+    </p>
+  } @else {
+    <ul class="divide-y mb-4">
+      @for (p of items(); track p.id) {
+        <li class="py-2">
+          <div class="flex items-center gap-3">
+            <span class="font-mono">{{ data.establishmentCode }}-{{ p.code }}</span>
+            <span class="flex-1 truncate">{{ p.name }}</span>
+            @if (p.isDefault) {
+              <span class="text-xs text-emerald-600">Por defecto</span>
+            } @else if (p.active) {
+              <button type="button" class="text-xs underline" [disabled]="saving()" (click)="makeDefault(p)">
+                Hacer principal
+              </button>
+            }
+            <button type="button" class="text-xs underline" [disabled]="saving()" (click)="toggleAssign(p)">
+              {{ assigningId() === p.id ? 'Ocultar' : 'Empleados' }}
+            </button>
+            <button type="button" class="text-xs underline" [disabled]="saving() || p.isDefault" (click)="toggleActive(p)">
+              {{ p.active ? 'Desactivar' : 'Activar' }}
+            </button>
+          </div>
+
+          @if (assigningId() === p.id) {
+            <div class="mt-2 rounded-xl border border-border bg-surface-hover p-3">
+              @if (employeesError()) {
+                <p class="text-xs text-red-600">{{ employeesError() }}</p>
+              } @else if (loadingUsers()) {
+                <p class="text-xs opacity-70">Cargando…</p>
+              } @else {
+                <p class="text-xs opacity-70 mb-2">
+                  Sin nadie marcado, cualquier empleado puede usar este punto. Al marcar, solo esos.
+                </p>
+                <ul class="max-h-48 overflow-y-auto space-y-1">
+                  @for (u of employees(); track u.id) {
+                    <li>
+                      <label class="flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="checkbox" [checked]="isSelected(u.id)" [disabled]="saving()" (change)="toggleUser(u.id)" />
+                        {{ u.name }}
+                      </label>
+                    </li>
+                  } @empty {
+                    <li class="text-xs opacity-70">No hay empleados.</li>
+                  }
+                </ul>
+                <div class="flex justify-end gap-3 mt-3">
+                  <button type="button" class="text-xs underline" [disabled]="saving()" (click)="toggleAssign(p)">Cancelar</button>
+                  <button type="button" class="btn-primary" [disabled]="saving()" (click)="saveUsers(p)">
+                    {{ saving() ? 'Guardando...' : 'Guardar' }}
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </li>
+      }
+    </ul>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="add()" class="flex gap-2 items-start">
+    <input class="input-field w-20" formControlName="code" placeholder="002" maxlength="3" inputmode="numeric" />
+    <input class="input-field flex-1" formControlName="name" placeholder="Caja 2" maxlength="100" />
+    <button class="btn-primary" type="submit" [disabled]="form.invalid || saving()">Agregar</button>
+  </form>
+
+  <p class="text-xs opacity-70 mt-2">
+    Antes de crear uno nuevo, regístralo en el SRI (Servicios en Línea). Si el SRI no lo conoce, rechaza la factura.
+  </p>
+
+  @if (error()) {
+    <p class="text-sm text-red-600 mt-2">{{ error() }}</p>
+  }
+
+  <div class="flex justify-end mt-4">
+    <button type="button" class="btn-primary" [disabled]="saving()" (click)="close()">Cerrar</button>
+  </div>
+</div>

@@ -28,6 +28,8 @@ import { InvoicesService } from '../../services/invoice.service';
 import { SalesService } from '../../services/sales.service';
 import { DiscountsService } from '../../services/discounts.service';
 import { DiscountDialog } from '../../components/discount-dialog/discount-dialog';
+import { ServicePickerDialog } from '../../components/service-picker-dialog/service-picker-dialog';
+import { BillingService } from '../../types/billing-service.type';
 import {
   CreateInvoiceRequest,
   DiscountOption,
@@ -40,6 +42,8 @@ import {
   SaleSearchQuery,
   SaleSearchResponse,
 } from '../../types/sale-product.type';
+import { EmissionPointService } from '../../../signature/services/emission-point.service';
+import { EmissionPoint } from '../../../signature/types/emission-point.type';
 
 /** Comprador ya elegido (existente o recién creado) para mostrar como resumen. */
 interface Buyer {
@@ -53,7 +57,7 @@ interface Buyer {
 const cents = (v: number) => Math.round((Number.isFinite(v) ? v : 0) * 100 + Number.EPSILON);
 const money = (c: number) => (c / 100).toFixed(2);
 
-/** IVA fijo de las facturas. (ASUMIDO) código SRI '4' = 15%. */
+/** IVA fijo de las ventas. (ASUMIDO) código SRI '4' = 15%. */
 const VAT_CODE = '4';
 const VAT_PCT = 15;
 /** Precio unitario con hasta 6 decimales (máximo que acepta el SRI). */
@@ -90,6 +94,7 @@ export class InvoiceForm {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly dialog = inject(Dialog);
+  private readonly emissionApi = inject(EmissionPointService);
 
   /** Se generan UNA vez y se reutilizan en todo reintento (idempotencia). */
   private readonly invoiceRequestId = crypto.randomUUID();
@@ -120,6 +125,10 @@ export class InvoiceForm {
   readonly buyerResults = signal<Buyer[]>([]);
   /** true cuando se buscó y no hubo coincidencias. */
   readonly buyerEmpty = signal(false);
+  /** Puntos de emisión que el usuario puede usar en su sucursal. */
+  readonly emissionPoints = signal<EmissionPoint[]>([]);
+  /** Punto elegido ('' = que el backend use el por defecto). */
+  readonly emissionPointId = signal('');
 
   readonly form = this.fb.group({
     buyerIdTypeCode: ['05'],
@@ -150,31 +159,26 @@ export class InvoiceForm {
   /** Vista previa informativa. El valor oficial lo calcula el servidor. */
   readonly preview = computed(() => {
     const inv = { sub: 0, vat: 0, disc: 0, count: 0 };
-    const rec = { sub: 0, disc: 0, count: 0 };
+    const rec = { sub: 0, vat: 0, disc: 0, count: 0 };
     for (const l of (this.value().lines ?? []) as any[]) {
-      const { base, discount: d } = this.calc(l);
-      if (l.billable) {
-        inv.sub += base;
-        inv.disc += d;
-        inv.count++;
-        inv.vat += Math.round((base * VAT_PCT) / 100);
-      } else {
-        rec.sub += base; // (asumido) el recibo no desglosa IVA
-        rec.disc += d;
-        rec.count++;
-      }
+      const { base, baseExact, discount: d } = this.calc(l);
+      // IVA sobre la base SIN redondear; se redondea una vez por línea.
+      const vat = Math.round((baseExact * VAT_PCT) / 100);
+      const t = l.billable ? inv : rec;
+      t.sub += base;
+      t.disc += d;
+      t.vat += vat;
+      t.count++;
     }
-    return {
-      invoice: {
-        count: inv.count,
-        subtotal: money(inv.sub),
-        discount: money(inv.disc),
-        vat: money(inv.vat),
-        total: money(inv.sub + inv.vat),
-        totalCents: inv.sub + inv.vat,
-      },
-      receipt: { count: rec.count, discount: money(rec.disc), total: money(rec.sub), totalCents: rec.sub },
-    };
+    const fmt = (t: typeof inv) => ({
+      count: t.count,
+      subtotal: money(t.sub),
+      discount: money(t.disc),
+      vat: money(t.vat),
+      total: money(t.sub + t.vat),
+      totalCents: t.sub + t.vat,
+    });
+    return { invoice: fmt(inv), receipt: fmt(rec) };
   });
 
   constructor() {
@@ -227,6 +231,22 @@ export class InvoiceForm {
         this.buyerResults.set(list);
         this.buyerEmpty.set(list.length === 0);
       });
+
+    const branchId = (this.auth.user() as any)?.branchId as string | undefined;
+    if (branchId) {
+      this.emissionApi.listMine(branchId).subscribe({
+        next: (r) => {
+          this.emissionPoints.set(r.items);
+          // Selección automática: el principal, o el primero si ninguno lo es.
+          const pick = r.items.find((p) => p.isDefault) ?? r.items[0];
+          this.emissionPointId.set(pick?.id ?? '');
+        },
+        error: () => {
+          this.emissionPoints.set([]);
+          this.emissionPointId.set(''); // sin lista, el backend usa el por defecto
+        },
+      });
+    }
   }
 
   // ---------- Teclado ----------
@@ -245,20 +265,23 @@ export class InvoiceForm {
    * Replica la regla del servidor (resolveForLine):
    * - PERCENT = bruto × %
    * - AMOUNT = monto fijo CON IVA, convertido a base sin IVA (monto / (1 + IVA))
-   * Nunca supera el bruto. El valor oficial lo calcula el servidor.
+   * Nunca supera el bruto. `baseExact` es la base sin redondear, para calcular el IVA.
+   * El valor oficial lo calcula el servidor.
    */
   private calc(l: any) {
+    const grossExact = Number(l.quantity) * Number(l.unitPrice) * 100; // centavos SIN redondear
     const gross = cents(Number(l.quantity) * Number(l.unitPrice));
     const dsc = l.discountId ? this.discounts().find((x) => x.id === l.discountId) : undefined;
-    // Las líneas de factura llevan IVA; las de recibo no.
-    const vatPct = l.billable ? VAT_PCT : 0;
-    const raw = !dsc
+    // Factura y recibo llevan IVA.
+    const vatPct = VAT_PCT;
+    const rawExact = !dsc
       ? 0
       : dsc.valueKind === 'PERCENT'
-        ? Math.round((gross * Number(dsc.value)) / 100)
-        : Math.round((Number(dsc.value) * 100) / (1 + vatPct / 100));
-    const d = Math.min(raw, gross);
-    return { gross, discount: d, base: gross - d };
+        ? (grossExact * Number(dsc.value)) / 100
+        : (Number(dsc.value) * 100) / (1 + vatPct / 100);
+    const dExact = Math.min(rawExact, grossExact);
+    const d = Math.min(Math.round(rawExact), gross);
+    return { gross, discount: d, base: gross - d, baseExact: grossExact - dExact };
   }
 
   /** Subtotal (sin IVA) de la línea i, para mostrar en la fila. */
@@ -270,13 +293,15 @@ export class InvoiceForm {
   private newLine(o?: SaleOption) {
     // hasTax = true → salePrice ya incluye el IVA: se separa (÷ 1.15) para obtener el precio sin IVA.
     // hasTax = false → salePrice es el precio sin IVA y el 15% se suma encima.
-    // Los productos que van a recibo no llevan IVA: se deja el precio tal cual.
-    const priceIncludesVat = !!o && o.lot.billableInSales && o.lot.hasTax;
+    // Aplica igual a factura y recibo.
+    const priceIncludesVat = !!o && o.lot.hasTax;
     const unitPrice = o
       ? round6(Number(o.lot.salePrice) / (priceIncludesVat ? 1 + VAT_PCT / 100 : 1))
       : 0;
 
     const g = this.fb.group({
+      /** Servicio del catálogo ('' = no es servicio). Aún no se envía al backend. */
+      serviceId: [''],
       productId: [o?.product.id ?? ''],
       lotId: [o?.lot.lotId ?? ''],
       unitId: [o?.unit?.unitId ?? ''],
@@ -293,8 +318,9 @@ export class InvoiceForm {
       unitPrice: [unitPrice, [Validators.required, Validators.min(0)]],
       /** Descuento elegido del catálogo ('' = ninguno). El servidor calcula el monto. */
       discountId: [''],
-      // IVA fijo al 15% en toda línea de factura; no se puede cambiar.
+      // IVA fijo al 15% en toda línea; no se puede cambiar.
       vatRateCode: [VAT_CODE, [Validators.required]],
+      /** true = factura SRI, false = recibo. En productos del sistema lo define el lote. */
       billable: [o?.lot.billableInSales ?? true],
     });
     g.get('vatRateCode')!.disable();
@@ -313,9 +339,45 @@ export class InvoiceForm {
     return g;
   }
 
-  /** Línea manual (sin producto del sistema): va a la factura y es totalmente editable. */
+  /** Línea manual (sin producto del sistema): totalmente editable; factura o recibo se elige en la línea. */
   addManualLine() {
     this.lines.push(this.newLine());
+  }
+
+  // ---------- Servicios ----------
+
+  openServices() {
+    this.notice.set(null);
+    this.dialog.open<BillingService>(ServicePickerDialog).closed.subscribe((s) => {
+      if (s) this.addService(s);
+    });
+  }
+
+  /**
+   * Agrega el servicio como línea. Por defecto va a factura; el usuario puede
+   * cambiarlo a recibo en la línea. Si ya existe una línea del mismo servicio
+   * en factura, solo suma 1 a la cantidad.
+   */
+  private addService(s: BillingService) {
+    const existing = this.lines.controls.find(
+      (l) => l.get('serviceId')!.value === s.id && l.get('billable')!.value === true,
+    );
+    if (existing) {
+      const q = existing.get('quantity')!;
+      q.setValue(Number(q.value) + 1);
+      return;
+    }
+    const g = this.newLine();
+    g.patchValue({
+      serviceId: s.id,
+      locked: true,
+      mainCode: s.code,
+      description: s.name,
+      unitPrice: Number(s.subtotal),
+      billable: true,
+    });
+    ['mainCode', 'description', 'unitPrice'].forEach((k) => g.get(k)!.disable());
+    this.lines.push(g);
   }
 
   removeLine(i: number) {
@@ -477,6 +539,11 @@ export class InvoiceForm {
     return r.name;
   }
 
+  /** Punto seleccionado, para mostrarlo como texto. */
+  selectedPoint(): EmissionPoint | undefined {
+    return this.emissionPoints().find((p) => p.id === this.emissionPointId());
+  }
+
   // ---------- Guardar ----------
 
   private validate(): string | null {
@@ -530,12 +597,16 @@ export class InvoiceForm {
           clientRequestId: this.invoiceRequestId,
           branchId,
           issueDate,
+          emissionPointId: this.emissionPointId() || undefined,
           buyerIdTypeCode: v.buyerIdTypeCode as CreateInvoiceRequest['buyerIdTypeCode'],
           buyerIdNumber: v.buyerIdNumber.trim(),
           buyerName: v.buyerName.trim(),
           buyerAddress: opt(v.buyerAddress),
           buyerEmail: opt(v.buyerEmail),
           lines: billable.map((l) => ({
+            productId: opt(l.productId),
+            lotId: opt(l.lotId),
+            unitId: opt(l.unitId),
             mainCode: l.mainCode.trim(),
             description: l.description.trim(),
             quantity: Number(l.quantity),
