@@ -28,6 +28,7 @@ interface DocItem {
   lines: InvoiceDetailLine[];
   reason: string | null;
   modifiedDocumentId: string | null;
+  relatedReceiptId: string | null;
 }
 
 const KIND_LABEL: Record<DocKind, string> = {
@@ -97,6 +98,7 @@ const toInvoiceItem = (d: any): DocItem => ({
   lines: d.lines ?? [],
   reason: d.reason ?? null,
   modifiedDocumentId: d.modifiedDocumentId ?? null,
+  relatedReceiptId: null,
 });
 
 const toReceiptItem = (d: any): DocItem => ({
@@ -117,6 +119,7 @@ const toReceiptItem = (d: any): DocItem => ({
   lines: [],
   reason: null,
   modifiedDocumentId: null,
+  relatedReceiptId: d.relatedReceiptId ?? null,
 });
 
 @Component({
@@ -286,5 +289,13 @@ export class InvoiceList {
   /** Número de la factura modificada, si está en la lista cargada. */
   modifiedNumber(d: DocItem): string | null {
     return this.all().find((x) => x.id === d.modifiedDocumentId)?.number ?? null;
+  }
+
+  canReturn(d: DocItem) {
+    return d.kind === 'RECIBO' && d.statusCode === 'EMITIDO';
+  }
+
+  relatedNumber(d: DocItem): string | null {
+    return this.all().find((x) => x.id === d.relatedReceiptId)?.number ?? null;
   }
 }

@@ -100,3 +100,41 @@ export interface CreateSaleReceiptRequest {
   paymentMethod: string;
   total: number;
 }
+
+// ---------- Retorno de recibos ----------
+
+export interface ReceiptListItem {
+  id: string;
+  kind: 'RECIBO' | 'RETORNO';
+  number: string;
+  statusCode: string;
+  issueDate: string;
+  buyerName: string;
+  buyerIdNumber: string | null;
+  total: string;
+  relatedReceiptId?: string | null;
+}
+
+export interface ReceiptDetailLine {
+  id: string;
+  position: number;
+  mainCode: string;
+  description: string;
+  quantity: string;
+  unitPrice: string;
+  discount: string;
+  lineTotal: string;
+  returnedQuantity?: string;
+  pendingQuantity?: string;
+}
+
+export interface ReceiptDetail extends ReceiptListItem {
+  lines: ReceiptDetailLine[];
+}
+
+export interface CreateReturnRequest {
+  clientRequestId: string;
+  relatedReceiptId: string;
+  issueDate: string; // YYYY-MM-DD
+  lines: { sourceLineId: string; quantity: number }[];
+}

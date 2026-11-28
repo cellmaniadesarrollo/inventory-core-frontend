@@ -3,7 +3,10 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { environment } from '../../../../environments/environment';
 import {
+  CreateReturnRequest,
   CreateSaleReceiptRequest,
+  ReceiptDetail,
+  ReceiptListItem,
   SaleSearchQuery,
   SaleSearchResponse,
 } from '../types/sale-product.type';
@@ -37,6 +40,14 @@ export class SalesService {
   }
 
   listReceipts() {
-    return this.http.get<{ items: any[] }>(this.receiptsUrl);
+    return this.http.get<{ items: ReceiptListItem[] }>(this.receiptsUrl);
+  }
+
+  getReceipt(id: string) {
+    return this.http.get<ReceiptDetail>(`${this.receiptsUrl}/${id}`);
+  }
+
+  createReturn(body: CreateReturnRequest) {
+    return this.http.post<ReceiptListItem>(`${this.receiptsUrl}/returns`, body);
   }
 }

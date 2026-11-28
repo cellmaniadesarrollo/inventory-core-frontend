@@ -12,10 +12,20 @@ export const INVOICES_ROUTES: Routes = [
   },
   {
     path: 'notas-credito/nueva',
+    canActivate: [adminGuard],
     loadComponent: () => import('./page/credit-note-form/credit-note-form').then((m) => m.CreditNoteForm),
   },
   {
     path: 'notas-credito/nueva/:id',
+    canActivate: [adminGuard],
     loadComponent: () => import('./page/credit-note-form/credit-note-form').then((m) => m.CreditNoteForm),
+  },
+  {
+    path: 'retornos/nuevo',
+    loadComponent: () => import('./page/return-form/return-form').then((m) => m.ReturnForm),
+  },
+  {
+    path: 'retornos/nuevo/:id',
+    loadComponent: () => import('./page/return-form/return-form').then((m) => m.ReturnForm),
   },
 ];

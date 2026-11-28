@@ -62,6 +62,8 @@ const VAT_CODE = '4';
 const VAT_PCT = 15;
 /** Precio unitario con hasta 6 decimales (máximo que acepta el SRI). */
 const round6 = (v: number) => Math.round(v * 1e6) / 1e6;
+/** Recibo: no desglosa IVA, el precio de la línea es el precio final (con IVA). */
+const withVat = (unitPrice: number) => round6(unitPrice * (1 + VAT_PCT / 100));
 
 function todayLocal(): string {
   const d = new Date();
@@ -640,7 +642,7 @@ export class InvoiceForm {
             batch: opt(l.batch),
             description: l.description.trim(),
             quantity: Number(l.quantity),
-            unitPrice: Number(l.unitPrice),
+            unitPrice: withVat(Number(l.unitPrice)),
             discountId: l.discountId || undefined,
           })),
         } satisfies CreateSaleReceiptRequest)
