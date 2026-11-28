@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { tap } from 'rxjs';
 import { JwtPayload, LoginRequest, LoginResponse } from '../models/auth.model';
 import { environment } from '../../../environments/environment';
+import { ADMIN_GROUPS } from '../constants/groups';
 
 const TOKEN_KEY = 'token';
 
@@ -42,11 +43,15 @@ export class AuthService {
         this.router.navigate(['/login']);
     }
 
-
-
     hasGroup(group: string): boolean {
         return this.user()?.groups?.includes(group) ?? false;
     }
+
+    hasAnyGroup(groups: readonly string[]): boolean {
+        return groups.some((g) => this.hasGroup(g));
+    }
+
+    readonly isAdmin = computed(() => this.hasAnyGroup(ADMIN_GROUPS));
 
     // "Recordarme" => localStorage (dura lo que dure el JWT); si no => sessionStorage
     private saveToken(token: string, remember: boolean) {

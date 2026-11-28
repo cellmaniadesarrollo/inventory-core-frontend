@@ -50,6 +50,9 @@ export interface Invoice {
   authorizationNumber: string | null;
   lastErrorMessage: string | null;
   createdAt: string;
+  documentTypeCode?: string;            // NUEVO: '01' factura, '04' NC
+  reason?: string | null;               // NUEVO: motivo (NC)
+  modifiedDocumentId?: string | null;   // NUEVO: factura que modifica (NC)
 }
 
 export interface DiscountOption {
@@ -67,6 +70,75 @@ export interface CreateDiscountRequest {
   value: number;
 }
 
+export interface InvoiceDetailLine {
+  id: string;
+  position: number;
+  mainCode: string;
+  description: string;
+  quantity: string;
+  unitPrice: string;
+  discount: string;
+  lineTotal: string;
+  vatRateCode?: string;
+  creditedQuantity?: string;   // NUEVO: ya devuelto por NC
+  pendingQuantity?: string;    // NUEVO: pendiente de devolver
+}
+
+export interface InvoiceDetail {
+  id: string;
+  series: string;
+  sequence: string;
+  statusCode: string;
+  documentTypeCode?: string;   // NUEVO
+  issueDate?: string;          // NUEVO
+  buyerIdTypeCode: string | null;
+  buyerIdNumber: string | null;
+  buyerName: string;
+  buyerAddress: string | null;
+  buyerEmail: string | null;
+  subtotal: string;
+  totalDiscount: string;
+  vatValue: string;
+  total: string;
+  lastErrorCode: string | null;
+  lastErrorMessage: string | null;
+  sriMessages: unknown[] | null;
+  lines: InvoiceDetailLine[];
+}
+
+export interface CorrectLineRequest {
+  id: string;
+  mainCode: string;
+  description: string;
+  unitPrice: number;
+  vatRateCode: string;
+}
+
+export interface CorrectInvoiceRequest {
+  buyerIdTypeCode: string;
+  buyerIdNumber: string;
+  buyerName: string;
+  buyerAddress?: string;
+  buyerEmail?: string;
+  lines?: CorrectLineRequest[];
+}
+
+// NUEVO: nota de crédito
+export interface CreditNoteLineRequest {
+  sourceLineId: string;
+  quantity: number;
+}
+
+export interface CreateCreditNoteRequest {
+  clientRequestId: string;
+  modifiedDocumentId: string;
+  issueDate: string;           // YYYY-MM-DD
+  reason: string;
+  lines: CreditNoteLineRequest[];
+  returnStock?: boolean;
+}
+
+export interface CorrectInvoiceResponse { id: string; signed: boolean; }
 export interface InvoiceCreated extends Invoice { replayed: boolean; }
 export interface InvoiceListResponse { items: Invoice[]; }
 export interface VatRateOption { code: string; name: string; percentage: number; }

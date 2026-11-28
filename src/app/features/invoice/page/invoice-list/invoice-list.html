@@ -4,7 +4,11 @@
       <h1 class="text-xl text-heading">Documentos</h1>
       <p class="text-sm text-body">{{ items().length }} documento(s)</p>
     </div>
-    <a routerLink="nueva" class="btn-primary">Nueva venta</a>
+    <!-- NUEVO CAMBIO 1: dos botones en vez de uno -->
+    <div class="flex gap-2">
+      <a routerLink="notas-credito/nueva" class="rounded-lg border border-border px-4 py-2 text-sm hover:bg-surface-hover">Nota de crédito</a>
+      <a routerLink="nueva" class="btn-primary">Nueva venta</a>
+    </div>
   </header>
 
   @if (error()) {
@@ -12,6 +16,12 @@
       <span>{{ error() }}</span>
       <button type="button" (click)="reload()" class="font-semibold underline">Reintentar</button>
     </div>
+  }
+
+  @if (retryError()) {
+    <p class="rounded-xl border border-red-300/60 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-300">
+      {{ retryError() }}
+    </p>
   }
 
   @if (!loading() && all().length > 0) {
@@ -46,7 +56,16 @@
               <p class="mt-0.5 truncate text-sm text-body">
                 {{ d.buyerName }}@if (d.buyerIdNumber) { · {{ d.buyerIdNumber }} }
               </p>
-              <p class="text-xs text-text-subtle">Emitido el {{ date(d.issueDate) }}</p>
+              <p class="text-xs text-text-subtle">
+                Emitido el {{ date(d.issueDate) }}@if (d.buyerEmail) { · {{ d.buyerEmail }} }
+              </p>
+
+              <!-- NUEVO CAMBIO 2: motivo y factura modificada, solo en notas de crédito -->
+              @if (d.kind === 'NOTA_CREDITO') {
+                <p class="text-xs text-text-subtle">
+                  Motivo: {{ d.reason }}@if (modifiedNumber(d); as n) { · Factura {{ n }} }
+                </p>
+              }
             </div>
             <div class="text-right">
               <p class="text-base font-semibold text-text">{{ d.total }}</p>
@@ -55,8 +74,71 @@
               </span>
             </div>
           </div>
-          @if (d.errorMessage) {
-            <p class="mt-2 text-xs text-red-700 dark:text-red-300">{{ d.errorMessage }}</p>
+
+          @if (d.lines.length) {
+            <div class="mt-3 border-t border-border pt-2 text-sm">
+              @for (l of expanded() === d.id ? d.lines : d.lines.slice(0, 2); track l.id) {
+                <div class="flex justify-between gap-3 py-1">
+                  <div class="min-w-0">
+                    <p class="truncate text-text">{{ +l.quantity }} × {{ l.description }}</p>
+                    @if (expanded() === d.id) {
+                      <p class="text-xs text-text-subtle">
+                        {{ l.mainCode }} · P. unit. {{ +l.unitPrice }}@if (+l.discount) { · Desc. {{ l.discount }} }
+                      </p>
+                    }
+                  </div>
+                  <span class="text-text">{{ l.lineTotal }}</span>
+                </div>
+              }
+
+              @if (expanded() === d.id) {
+                <p class="mt-1 text-right text-xs text-body">
+                  Subtotal {{ d.subtotal }} · Descuento {{ d.discount }} · IVA {{ d.vat }}
+                </p>
+              }
+
+              <button type="button" (click)="toggle(d.id)" class="mt-1 text-xs font-semibold text-primary hover:underline">
+                @if (expanded() === d.id) {
+                  Ver menos
+                } @else {
+                  Ver detalle@if (d.lines.length > 2) { (+{{ d.lines.length - 2 }} más) }
+                }
+              </button>
+            </div>
+          }
+
+          @if (canRetry(d)) {
+            <div class="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-amber-500/10 px-3 py-2">
+              <p class="text-xs text-amber-700 dark:text-amber-300">
+                Pendiente de envío o autorización del SRI.
+              </p>
+              <button type="button" class="btn-primary shrink-0 !px-3 !py-1.5 text-xs"
+                      [disabled]="retrying() === d.id" (click)="retry(d)">
+                {{ retrying() === d.id ? 'Reintentando...' : 'Reintentar envío' }}
+              </button>
+            </div>
+          }
+
+          <!-- NUEVO CAMBIO 3: enlace para emitir NC desde una factura autorizada -->
+          @if (canCredit(d)) {
+            <div class="mt-3 flex justify-end">
+              <a [routerLink]="['notas-credito/nueva', d.id]" class="text-xs font-semibold text-primary hover:underline">
+                Emitir nota de crédito
+              </a>
+            </div>
+          }
+
+          @if (d.errorMessage || canFix(d)) {
+            <div class="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-red-500/10 px-3 py-2">
+              <p class="min-w-0 text-xs text-red-700 dark:text-red-300">
+                {{ d.errorMessage || 'La factura no fue autorizada por el SRI.' }}
+              </p>
+              @if (canFix(d)) {
+                <a [routerLink]="['corregir', d.id]" class="btn-primary shrink-0 !px-3 !py-1.5 text-xs">
+                  Corregir y reenviar
+                </a>
+              }
+            </div>
           }
         </article>
       } @empty {

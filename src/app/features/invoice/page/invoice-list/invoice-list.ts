@@ -4,8 +4,9 @@ import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { catchError, forkJoin, of, switchMap, tap } from 'rxjs';
 import { InvoicesService } from '../../services/invoice.service';
 import { SalesService } from '../../services/sales.service';
-import { InvoiceStatus } from '../../types/invoice.type';
+import { InvoiceDetailLine, InvoiceStatus } from '../../types/invoice.type';
 import { RealtimeService } from '../../../../core/services/realtime.service';
+import { AuthService } from '../../../../core/services/auth.service';
 
 type DocKind = 'FACTURA' | 'RECIBO' | 'NOTA_CREDITO' | 'NOTA_DEBITO' | 'RETORNO';
 
@@ -20,6 +21,13 @@ interface DocItem {
   total: string;
   statusCode: string;
   errorMessage: string | null;
+  buyerEmail: string | null;
+  subtotal: string | null;
+  discount: string | null;
+  vat: string | null;
+  lines: InvoiceDetailLine[];
+  reason: string | null;
+  modifiedDocumentId: string | null;
 }
 
 const KIND_LABEL: Record<DocKind, string> = {
@@ -82,6 +90,13 @@ const toInvoiceItem = (d: any): DocItem => ({
   total: d.total,
   statusCode: d.statusCode,
   errorMessage: d.lastErrorMessage ?? null,
+  buyerEmail: d.buyerEmail ?? null,
+  subtotal: d.subtotal ?? null,
+  discount: d.totalDiscount ?? null,
+  vat: d.vatValue ?? null,
+  lines: d.lines ?? [],
+  reason: d.reason ?? null,
+  modifiedDocumentId: d.modifiedDocumentId ?? null,
 });
 
 const toReceiptItem = (d: any): DocItem => ({
@@ -95,6 +110,13 @@ const toReceiptItem = (d: any): DocItem => ({
   total: d.total,
   statusCode: d.statusCode,
   errorMessage: null,
+  buyerEmail: null,
+  subtotal: null,
+  discount: null,
+  vat: null,
+  lines: [],
+  reason: null,
+  modifiedDocumentId: null,
 });
 
 @Component({
@@ -107,6 +129,11 @@ export class InvoiceList {
   private readonly api = inject(InvoicesService);
   private readonly sales = inject(SalesService);
   private readonly realtime = inject(RealtimeService);
+  private readonly auth = inject(AuthService);
+  readonly isAdmin = this.auth.isAdmin;
+  readonly expanded = signal<string | null>(null);
+  readonly retrying = signal<string | null>(null);
+  readonly retryError = signal<string | null>(null);  
 
   readonly all = signal<DocItem[]>([]);
   readonly loading = signal(true);
@@ -129,6 +156,26 @@ export class InvoiceList {
       ...[...counts].map(([key, count]) => ({ key, label: KIND_PLURAL[key], count })),
     ];
   });
+
+  canRetry(d: DocItem) {
+    return (d.kind === 'FACTURA' || d.kind === 'NOTA_CREDITO')
+      && ['BORRADOR', 'FIRMADO', 'RECIBIDO', 'PPR'].includes(d.statusCode);
+  }
+
+  retry(d: DocItem) {
+    if (this.retrying()) return;
+    this.retrying.set(d.id);
+    this.retryError.set(null);
+    this.api.retry(d.id).subscribe({
+      next: () => { this.retrying.set(null); this.reload(); },
+      error: (e) => {
+        this.retrying.set(null);
+        const msg = e?.error?.message;
+        this.retryError.set(Array.isArray(msg) ? msg.join(' ') : (msg ?? 'No se pudo reintentar.'));
+        this.reload();
+      },
+    });
+  }
 
   constructor() {
     toObservable(this.reloadTick)
@@ -222,5 +269,22 @@ export class InvoiceList {
   date(iso: string): string {
     const [y, m, d] = iso.slice(0, 10).split('-');
     return `${d}/${m}/${y}`;
+  }
+
+  toggle(id: string) {
+    this.expanded.update((x) => (x === id ? null : id));
+  }
+
+  canFix(d: DocItem) {
+    return this.isAdmin() && d.kind === 'FACTURA' && ['DEVUELTO', 'NAT'].includes(d.statusCode);
+  }
+
+  canCredit(d: DocItem) {
+    return d.kind === 'FACTURA' && d.statusCode === 'AUT';
+  }
+
+  /** Número de la factura modificada, si está en la lista cargada. */
+  modifiedNumber(d: DocItem): string | null {
+    return this.all().find((x) => x.id === d.modifiedDocumentId)?.number ?? null;
   }
 }
